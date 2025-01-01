@@ -1,0 +1,20 @@
+# config/environments/production.yaml
+environment: production
+api_endpoints:
+  - name: main
+    url: "https://hass-prod.example.com/api"
+    auth_token: "${HASS_PROD_TOKEN}"  # Use environment variable
+    timeout: 10
+  - name: backup
+    url: "https://hass-backup.example.com/api"
+    auth_token: "${HASS_BACKUP_TOKEN}"
+    timeout: 15
+
+monitoring:
+  check_interval: 60  # Override default for production
+  health_check_interval: 300  # Override default for production
+
+notifications:
+  messages:
+    down: "🚨 Production API is unavailable!"
+    up: "✅ Production API is back online!"

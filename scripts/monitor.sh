@@ -1,8 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Main script handling the monitoring loop.
+# shellcheck disable=SC1091
 
 # Load dependencies
-source "$(dirname "$0")/constants.sh" || { echo "Failed to load constants. Exiting."; exit 1; }
+# source "$(dirname "$0")/shell_constants.sh" || { echo "Failed to load constants. Exiting."; exit 1; }
+source "$(dirname "$0")/config_loader.sh" || { echo "Failed to load configuration. Exiting."; exit 1; }
 source "$(dirname "$0")/utils.sh" || { echo "Failed to load utilities. Exiting."; exit 1; }
 source "$(dirname "$0")/metrics.sh" || { echo "Failed to load metrics. Exiting."; exit 1; }
 source "$(dirname "$0")/status_server.sh" || { echo "Failed to load status server. Exiting."; exit 1; }
@@ -28,7 +30,7 @@ cleanup() {
   
   # Cleanup temporary files
   rm -f "/tmp/notification_last_sent"
-  rm -f "$TEMP_DIR/status_template.html"
+  rm -f "$PATHS_TEMP_DIR/status_template.html"
   
   exit 0
   # log "info" "Cleanup completed. Exiting."
@@ -40,42 +42,50 @@ trap cleanup SIGTERM SIGINT SIGQUIT
 # Health Check Logging
 log_health_check() {
   local total_endpoints="${#endpoints[@]}"
-  local up_count=$(check_endpoints_async "${endpoints[@]}" | grep -c "succeeded")
+  local up_count
+  up_count=$(check_endpoints_async "${endpoints[@]}" | grep -c "succeeded")
   local down_count=$((total_endpoints - up_count))
   log "info" "Health Check: $up_count/$total_endpoints endpoints are up. $down_count are down."
 }
 
 # Monitor Endpoints
-# monitor_endpoints() {
-#   IFS=',' read -ra endpoints <<< "$HASS_API_URL"
-#   local downtime_start=0
-#   while true; do
-#     if ! check_endpoints_async "${endpoints[@]}"; then
-#       log "err" "One or more endpoints are down. Sending notifications..."
-#       downtime_start=$(date +%s)
-#       send_notifications_async "${ENDPOINT_DOWN_MESSAGE:-API is unavailable. Monitoring for recovery...}"
+# The endpoints will be in the API_ENDPOINTS array from the config
+# for endpoint in "${API_ENDPOINTS[@]}"; do
+#   url=$(echo "$endpoint" | yq e '.url' -)
+#   auth_token=$(echo "$endpoint" | yq e '.auth_token' -)
+#   # ... rest of your endpoint processing
+# done
+monitor_endpoints() {
+  IFS=',' read -ra endpoints <<< "$HASS_API_URL"
+  local downtime_start=0
+  while true; do
+    if ! check_endpoints_async "${endpoints[@]}"; then
+      log "err" "One or more endpoints are down. Sending notifications..."
+      downtime_start=$(date +%s)
+      send_notifications_async "${NOTIFICATIONS_MESSAGES_DOWN:-API is unavailable. Monitoring for recovery...}"
 
-#       # Continuous failure notifications
-#       while true; do
-#         local now=$(date +%s)
-#         local downtime=$((now - downtime_start))
-#         if (( downtime % CONTINUOUS_FAILURE_INTERVAL == 0 )); then
-#           send_notifications_async "API has been down for $((downtime / 60)) minutes."
-#         fi
-#         sleep "$CHECK_INTERVAL"
-#         if check_endpoints_async "${endpoints[@]}"; then
-#           log "info" "All endpoints are back online. Sending recovery notifications..."
-#           send_notifications_async "${ENDPOINT_UP_MESSAGE:-API is back online!}"
-#           break
-#         fi
-#       done
-#     else
-#       # log "info" "Health Check: All monitored endpoints are up."
-#       log_health_check
-#       sleep "$HEALTH_CHECK_INTERVAL"
-#     fi
-#   done
-# }
+      # Continuous failure notifications
+      while true; do
+        local now
+        now=$(date +%s)
+        local downtime=$((now - downtime_start))
+        if (( downtime % ${CONTINUOUS_FAILURE_INTERVAL:-${DEFAULT_MONITORING_CONTINUOUS_FAILURE_INTERVAL:-1800}} == 0 )); then
+          send_notifications_async "API has been down for $((downtime / 60)) minutes."
+        fi
+        sleep "${CHECK_INTERVAL:-${DEFAULT_MONITORING_CHECK_INTERVAL:-300}}"
+        if check_endpoints_async "${endpoints[@]}"; then
+          log "info" "All endpoints are back online. Sending recovery notifications..."
+          send_notifications_async "${NOTIFICATIONS_MESSAGES_UP:-API is back online!}"
+          break
+        fi
+      done
+    else
+      # log "info" "Health Check: All monitored endpoints are up."
+      log_health_check
+      sleep "${HEALTH_CHECK_INTERVAL:-${DEFAULT_MONITORING_HEALTH_CHECK_INTERVAL:-600}}"
+    fi
+  done
+}
 monitor_endpoints() {
   IFS=',' read -ra endpoints <<< "$HASS_API_URL"
   local downtime_start=0
@@ -103,10 +113,11 @@ monitor_endpoints() {
       # Enter downtime loop
       downtime_start=$(date +%s)
       while true; do
-        local now=$(date +%s)
+        local now
+        now=$(date +%s)
         local downtime=$((now - downtime_start))
 
-        if (( downtime % CONTINUOUS_FAILURE_INTERVAL == 0 )); then
+        if (( downtime % ${CONTINUOUS_FAILURE_INTERVAL:-${DEFAULT_MONITORING_CONTINUOUS_FAILURE_INTERVAL:-1800}} == 0 )); then
           if throttle_notifications; then
             send_batched_notifications "${failed_endpoints[@]}"
           else
@@ -114,7 +125,7 @@ monitor_endpoints() {
           fi
         fi
 
-        sleep "$CHECK_INTERVAL"
+        sleep "${CHECK_INTERVAL:-${DEFAULT_MONITORING_CHECK_INTERVAL:-300}}"
 
         # Re-check endpoints
         local new_failed_endpoints=()
@@ -136,7 +147,7 @@ monitor_endpoints() {
     else
       # log "info" "All endpoints are operational."
       log_health_check
-      sleep "$HEALTH_CHECK_INTERVAL"
+      sleep "${HEALTH_CHECK_INTERVAL:-${DEFAULT_MONITORING_HEALTH_CHECK_INTERVAL:-600}}"
     fi
   done
 }

@@ -1,0 +1,11 @@
+# config/environments/staging.yaml
+environment: staging
+api_endpoints:
+  - name: staging
+    url: "https://hass-staging.example.com/api"
+    auth_token: "${HASS_STAGING_TOKEN}"
+    timeout: 20
+
+monitoring:
+  check_interval: 300  # Override default for staging
+  health_check_interval: 600  # Override default for staging

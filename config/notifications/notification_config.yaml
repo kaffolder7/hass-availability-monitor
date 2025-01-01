@@ -1,0 +1,52 @@
+# config/notifications/notification_config.yaml
+notifications:
+  sms:
+    enabled: true
+    method: "twilio"  # or "forwardemail"
+    recipients: ["+11234567890", "1234567890@vtext.com"]
+    from: "${SMS_FROM:-TWILIO_FROM}"
+    settings:
+      twilio:
+        account_sid: "${TWILIO_ACCOUNT_SID}"
+        auth_token: "${TWILIO_AUTH_TOKEN}"
+      forwardemail:
+        auth_token: "${FORWARDEMAIL_AUTH_TOKEN}"
+
+  email:
+    enabled: true
+    driver: "smtp"  # or "sendgrid"
+    from: "monitor@example.com"
+    to: "alerts@example.com"
+    subject: "Home Assistant Monitor Alert"
+    settings:
+      smtp:
+        host: "smtp.example.com"
+        port: 587
+        username: "${SMTP_USERNAME}"  # specify if different from `MAIL_FROM` value
+        password: "${SMTP_PASSWORD}"
+        encryption: "tls"  # can be 'ssl', 'tls', or left empty (e.g. to disable if a secure SSL/TLS connection is not required for the mail server)
+      sendgrid:
+        api_key: "${SENDGRID_API_KEY}"
+
+  services:
+    slack:
+      enabled: true
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+    
+    teams:
+      enabled: true
+      webhook_url: "${TEAMS_WEBHOOK_URL}"
+    
+    discord:
+      enabled: true
+      webhook_url: "${DISCORD_WEBHOOK_URL}"
+    
+    telegram:
+      enabled: true
+      chat_id: "${TELEGRAM_CHAT_ID}"
+      bot_token: "${TELEGRAM_BOT_API_TOKEN}"
+    
+    pagerduty:
+      enabled: true
+      routing_key: "${PAGERDUTY_ROUTING_KEY}"
+      event_source: "Home Assistant Availability Monitor"  # defaults to "Home Assistant Availability Monitor" if left blank
