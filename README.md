@@ -167,4 +167,4 @@ Available test scenarios:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2024 Kyle Affolder
+Copyright (c) 2024 [@kaffolder7](https://github.com/kaffolder7)
