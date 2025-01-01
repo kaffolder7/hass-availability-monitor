@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-source "$(dirname "$0")/constants.sh"
+# shellcheck disable=SC1091
 source "$(dirname "$0")/security.sh"
+# shellcheck disable=SC1091
 source "$(dirname "$0")/metrics.sh"
 
 declare -A REQUEST_CACHE
@@ -10,7 +11,8 @@ declare -A CACHE_TIMESTAMPS
 cache_request() {
   local url="$1"
   local response="$2"
-  local timestamp=$(date +%s)
+  local timestamp
+  timestamp=$(date +%s)
   
   REQUEST_CACHE["$url"]="$response"
   CACHE_TIMESTAMPS["$url"]="$timestamp"
@@ -18,9 +20,10 @@ cache_request() {
 
 get_cached_request() {
   local url="$1"
-  local cache_ttl=${CACHE_TTL:-30}  # 30 seconds default
+  local cache_ttl=${CACHE_TTL:-${DEFAULT_CACHE_TTL:-30}}  # 30 seconds default
   local timestamp=${CACHE_TIMESTAMPS["$url"]}
-  local now=$(date +%s)
+  local now
+  now=$(date +%s)
   
   if [[ -n "$timestamp" && $((now - timestamp)) -lt $cache_ttl ]]; then
     echo "${REQUEST_CACHE["$url"]}"
@@ -30,18 +33,21 @@ get_cached_request() {
 }
 
 cleanup_cache() {
-  local now=$(date +%s)
+  local cache_limit=${CACHE_SIZE_LIMIT:-${DEFAULT_CACHE_SIZE_LIMIT:-1000}}
+  local now
+  now=$(date +%s)
   
   # Remove expired entries
   for url in "${!CACHE_TIMESTAMPS[@]}"; do
-    if (( now - CACHE_TIMESTAMPS["$url"] >= CACHE_TTL )); then
+    ttl=${CACHE_TTL:-${DEFAULT_CACHE_TTL:-30}}
+    if (( now - CACHE_TIMESTAMPS["$url"] >= ttl )); then
       unset "REQUEST_CACHE[$url]"
       unset "CACHE_TIMESTAMPS[$url]"
     fi
   done
   
   # If still too many entries, remove oldest
-  while [[ ${#REQUEST_CACHE[@]} -gt $CACHE_SIZE_LIMIT ]]; do
+  while [[ ${#REQUEST_CACHE[@]} -gt $cache_limit ]]; do
     local oldest_url
     local oldest_time=$now
     
@@ -59,7 +65,7 @@ cleanup_cache() {
 
 check_endpoints_async() {
   local endpoints=("$@")
-  local max_jobs=${MAX_CONCURRENT_JOBS:-$DEFAULT_MAX_JOBS}
+  local max_jobs=${MAX_CONCURRENT_JOBS:-${DEFAULT_MONITORING_MAX_CONCURRENT_JOBS:-4}}
   local pids=()
   local results=()
   local active_jobs=0
@@ -67,7 +73,8 @@ check_endpoints_async() {
   setup_secure_curl
   
   # Create a named pipe for results
-  local pipe=$(mktemp -u)
+  local pipe
+  pipe=$(mktemp -u)
   mkfifo "$pipe"
   
   # Start endpoint checks
@@ -88,13 +95,16 @@ check_endpoints_async() {
     
     # Start new check
     {
-      local start_time=$(date +%s%N)
+      local start_time
+      local end_time
+      start_time=$(date +%s%N)
       if check_api_with_backoff "$endpoint"; then
         local result=0
       else
         local result=1
       fi
-      local end_time=$(date +%s%N)
+      # local end_time
+      end_time=$(date +%s%N)
       local response_time=$(( (end_time - start_time) / 1000000 )) # Convert to milliseconds
       
       # Update metrics
@@ -130,6 +140,7 @@ check_endpoints_async() {
 
 check_api_with_backoff() {
   local url="$1"
+  local retry_count=${RETRY_COUNT:-${DEFAULT_MONITORING_RETRY_COUNT:-3}}
   local attempt=1
 
   # Try cache first
@@ -138,7 +149,7 @@ check_api_with_backoff() {
     return 0
   fi
   
-  while (( attempt <= DEFAULT_RETRY_COUNT )); do
+  while (( attempt <= retry_count )); do
     local response_code
     response_code=$(curl "${CURL_SECURE_OPTIONS[@]}" \
       -H "Authorization: Bearer $HASS_AUTH_TOKEN" \
@@ -146,7 +157,7 @@ check_api_with_backoff() {
       --silent --output /dev/null \
       "$url")
         
-    if [[ "$response_code" -eq 200 ]]; then
+    if [[ "$response_code" -eq ${MONITORING_SUCCESS_CODE:-${DEFAULT_MONITORING_SUCCESS_CODE:-200}} ]]; then
       log "info" "API request to $url succeeded on attempt $attempt."
       # Cache successful response
       cache_request "$url" "$response_code"
@@ -157,9 +168,9 @@ check_api_with_backoff() {
       unset "REQUEST_CACHE[$url]"
       unset "CACHE_TIMESTAMPS[$url]"
       
-      if (( attempt < DEFAULT_RETRY_COUNT )); then
+      if (( attempt < retry_count )); then
         local sleep_time
-        sleep_time=$(exponential_backoff "$attempt" "$DEFAULT_RETRY_INTERVAL")
+        sleep_time=$(exponential_backoff "$attempt" "${RETRY_INTERVAL:-DEFAULT_MONITORING_RETRY_INTERVAL}")
         log "info" "Retrying $url in $sleep_time seconds..."
         sleep "$sleep_time"
       fi
@@ -167,6 +178,6 @@ check_api_with_backoff() {
     ((attempt++))
   done
   
-  log "err" "API request to $url failed after $DEFAULT_RETRY_COUNT attempts."
+  log "err" "API request to $url failed after $retry_count attempts."
   return 1
 }

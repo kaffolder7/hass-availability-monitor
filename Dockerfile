@@ -3,6 +3,10 @@ FROM alpine:3.21 AS builder
 
 WORKDIR /build
 
+# Install `yq` for YAML processing (of project config files) ...needs to be its own separate layer before `curl` is installed in last layer
+# RUN curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+#     chmod +x /usr/local/bin/yq
+
 # Copy and set permissions for scripts and configs
 COPY --chmod=755 scripts/ ./scripts/
 COPY --chmod=600 configs/.env ./configs/.env
@@ -15,6 +19,7 @@ RUN addgroup -S monitor && adduser -S monitor -G monitor
 
 # Use Bash for commands
 # SHELL ["/bin/bash", "-c"]
+# SHELL ["/usr/bin/env", "bash"]
 
 WORKDIR /app
 
@@ -23,10 +28,14 @@ RUN apk add --no-cache \
     bash=5.2.37-r0 \
     curl=8.11.1-r0 \
     gzip=1.13-r0 \
-    supervisor=4.2.5-r5 \
     mailx=8.1.2_git20220412-r1 \
+    supervisor=4.2.5-r5 \
     && mkdir -p /var/log/supervisor \
     && chown -R monitor:monitor /var/log/supervisor
+
+# Install `yq` for YAML processing (of project config files) ...needs to be its own separate layer before `curl` is installed in last layer
+RUN curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+    chmod +x /usr/local/bin/yq
 
 # Create and set permissions for required directories BEFORE switching user
 RUN mkdir -p \

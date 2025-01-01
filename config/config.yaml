@@ -1,0 +1,50 @@
+# config/config.yaml
+default:
+  monitoring:
+    max_concurrent_jobs: 4  # Optional: Maximum concurrent jobs for endpoint checks
+    retry_count: 3
+    retry_interval: 60  # Retry interval in seconds
+    check_interval: 300  # Interval to recheck when the endpoint is down
+    health_check_interval: 600  # Interval for health check logs
+    continuous_failure_interval: 1800  # Notify every 30 minutes during downtime
+    success_code: 200
+    dry_run: false  # Enable dry-run mode for testing
+    resources:
+      check_interval: 300  # Check every 5 minutes
+      cpu_threshold: 90
+      memory_threshold: 90
+      disk_threshold: 90
+  
+  # Notification rate limiting
+  notifications:
+    ratelimit_window: 300  # 5 minutes
+    max_count: 3
+    cooldown: 1800  # 30 minutes
+
+  security:
+    tls_min_version: "1.2"
+    required_ciphers: "HIGH:!aNULL:!MD5:!RC4"
+    api_timeout: 10
+    api_max_redirects: 5
+
+  metrics:
+    retention_days: 30
+    update_interval: 60
+    trend:
+      window_size: 10
+      threshold: 0.8
+      check_interval: 300  # Check trends every 5 minutes
+
+  cache:
+    ttl: 30  # Cache TTL in seconds
+    size_limit: 1000  # Maximum number of cached entries
+  
+  status:
+    server:
+      port: 8080
+      success_code: 200
+
+  paths:
+    log_dir: "/var/log/home_assistant_monitor"
+    metrics_dir: "/var/lib/home_assistant_monitor/metrics"
+    temp_dir: "/tmp/home_assistant_monitor"

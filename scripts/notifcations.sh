@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Handles all notification methods.
 
 send_notification() {
@@ -22,66 +22,66 @@ send_slack_notification() {
   local message=$1
   # local payload='{"text":"'"$message"'"}'
   local payload='{"blocks":[{"type":"section","text":{"type":"mrkdwn","text":"*Home Assistant Monitor Alert*\n'"$message"'"}}]}'
-  # send_notification "Slack" "$SLACK_WEBHOOK_URL" "$payload" "Failed to send Slack notification."
-  send_notification "Slack" "$payload" "$SLACK_WEBHOOK_URL"
-  # send_notification "Slack" '{"blocks":[{"type":"section","text":{"type":"mrkdwn","text":"*Home Assistant Monitor Alert*\n'"$message"'"}}]}' "$SLACK_WEBHOOK_URL"
+  # send_notification "Slack" "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL" "$payload" "Failed to send Slack notification."
+  send_notification "Slack" "$payload" "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL"
+  # send_notification "Slack" '{"blocks":[{"type":"section","text":{"type":"mrkdwn","text":"*Home Assistant Monitor Alert*\n'"$message"'"}}]}' "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL"
 }
 
 send_teams_notification() {
   local message=$1
   # local payload='{"text":"'"$message"'"}'
   local payload='{"title":"Home Assistant Monitor Alert","text":"'"$message"'"}'
-  # send_notification "Teams" "$TEAMS_WEBHOOK_URL" "$payload" "Failed to send Teams notification."
-  send_notification "Teams" "$payload" "$TEAMS_WEBHOOK_URL"
-  # send_notification "Teams" '{"title":"Home Assistant Monitor Alert","text":"'"$message"'"}' "$TEAMS_WEBHOOK_URL"
+  # send_notification "Teams" "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL" "$payload" "Failed to send Teams notification."
+  send_notification "Teams" "$payload" "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL"
+  # send_notification "Teams" '{"title":"Home Assistant Monitor Alert","text":"'"$message"'"}' "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL"
 }
 
 send_discord_notification() {
   local message=$1
   # local payload='{"content":"'"$message"'"}'
   local payload='{"embeds":[{"title": "Home Assistant Monitor Alert","description": "'"$message"'","color": e74c3c}]}'
-  # send_notification "Discord" "$DISCORD_WEBHOOK_URL" "$payload" "Failed to send Discord notification."
-  send_notification "Discord" "$payload" "$DISCORD_WEBHOOK_URL"
-  # send_notification "Discord" '{"embeds":[{"title": "Home Assistant Monitor Alert","description": "'"$message"'","color": e74c3c}]}' "$DISCORD_WEBHOOK_URL"
+  # send_notification "Discord" "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL" "$payload" "Failed to send Discord notification."
+  send_notification "Discord" "$payload" "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL"
+  # send_notification "Discord" '{"embeds":[{"title": "Home Assistant Monitor Alert","description": "'"$message"'","color": e74c3c}]}' "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL"
 }
 
 send_telegram_notification() {
   local message=$1
-  # if [[ -z "$TELEGRAM_CHAT_ID" || -z "$TELEGRAM_BOT_API_TOKEN" ]]; then
+  # if [[ -z "$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID" || -z "$NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN" ]]; then
   #   log "err" "Telegram configuration incomplete. Unable to send notification."
   # fi
   # curl "${CURL_BASE_OPTIONS[@]}" -X POST -H 'Content-type: application/json' \
-  #   --data '{"chat_id":"'"$TELEGRAM_CHAT_ID"'","text":"'"$message"'","parse_mode":"HTML"}' "https://api.telegram.org/bot${TELEGRAM_BOT_API_TOKEN}/sendMessage" || \
+  #   --data '{"chat_id":"'"$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID"'","text":"'"$message"'","parse_mode":"HTML"}' "https://api.telegram.org/bot${NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN}/sendMessage" || \
   # curl "${CURL_BASE_OPTIONS[@]}" -X POST -H 'Content-type: application/json' \
-  #   --data '{"chat_id":"'"$TELEGRAM_CHAT_ID"'","text":"*Home Assistant Monitor Alert:*\n'"$message"'","parse_mode":"markdown"}' "https://api.telegram.org/bot${TELEGRAM_BOT_API_TOKEN}/sendMessage" || \
+  #   --data '{"chat_id":"'"$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID"'","text":"*Home Assistant Monitor Alert:*\n'"$message"'","parse_mode":"markdown"}' "https://api.telegram.org/bot${NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN}/sendMessage" || \
   #   log "err" "Failed to send Telegram notification."
-  if [[ -z "$TELEGRAM_CHAT_ID" || -z "$TELEGRAM_BOT_API_TOKEN" ]]; then
+  if [[ -z "$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID" || -z "$NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN" ]]; then
     log "err" "Telegram chat ID & Bot token incomplete. Skipping Telegram notification."
     return 1
   fi
-  if ! curl "${CURL_BASE_OPTIONS[@]}" -X POST -H "Content-Type: application/json" --data '{"chat_id":"'"$TELEGRAM_CHAT_ID"'","text":"*Home Assistant Monitor Alert:*\n'"$message"'","parse_mode":"markdown"}' "https://api.telegram.org/bot${TELEGRAM_BOT_API_TOKEN}/sendMessage"; then
+  if ! curl "${CURL_BASE_OPTIONS[@]}" -X POST -H "Content-Type: application/json" --data '{"chat_id":"'"$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID"'","text":"*Home Assistant Monitor Alert:*\n'"$message"'","parse_mode":"markdown"}' "https://api.telegram.org/bot${NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN}/sendMessage"; then
     log "err" "Failed to send Telegram notification."
     return 1
   fi
 }
 
 send_pagerduty_notification() {
-  # if [[ -z "$PAGERDUTY_ROUTING_KEY" ]]; then
+  # if [[ -z "$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY" ]]; then
   #   log "err" "PagerDuty configuration incomplete. Unable to send notification."
   # fi
 #       curl "${CURL_BASE_OPTIONS[@]}" -X POST -H "Content-Type: application/json" \
-#         --data '{"routing_key":"'"$PAGERDUTY_ROUTING_KEY"'","event_action":"trigger","payload":{"summary":"'"$message"'","source":"server1.example.com","severity":"critical"}
+#         --data '{"routing_key":"'"$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY"'","event_action":"trigger","payload":{"summary":"'"$message"'","source":"server1.example.com","severity":"critical"}
 # }' "https://events.pagerduty.com/v2/enqueue" || \
 #         log "err" "Failed to send PagerDuty notification."
 #     curl "${CURL_BASE_OPTIONS[@]}" -X POST -H "Content-Type: application/json" \
-#       --data '{"routing_key":"'"$PAGERDUTY_ROUTING_KEY"'","event_action":"trigger","payload":{"summary":"'"$message"'","source":"'"${PAGERDUTY_EVENT_SOURCE:-Home Assistant Availability Monitor}"'","severity":"critical"}
+#       --data '{"routing_key":"'"$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY"'","event_action":"trigger","payload":{"summary":"'"$message"'","source":"'"${NOTIFICATIONS_SERVICES_PAGERDUTY_EVENT_SOURCE:-Home Assistant Availability Monitor}"'","severity":"critical"}
 # }' "https://events.pagerduty.com/v2/enqueue" || \
 #       log "err" "Failed to send PagerDuty notification."
-  if [[ -z "$PAGERDUTY_ROUTING_KEY" ]]; then
+  if [[ -z "$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY" ]]; then
     log "err" "PagerDuty routing key not configured. Skipping PagerDuty notification."
     return 1
   fi
-  if ! curl "${CURL_BASE_OPTIONS[@]}" -X POST -H "Content-Type: application/json" --data '{"routing_key":"'"$PAGERDUTY_ROUTING_KEY"'","event_action":"trigger","payload":{"summary":"'"$message"'","source":"'"${PAGERDUTY_EVENT_SOURCE:-Home Assistant Availability Monitor}"'","severity":"critical"}}' "https://events.pagerduty.com/v2/enqueue"; then
+  if ! curl "${CURL_BASE_OPTIONS[@]}" -X POST -H "Content-Type: application/json" --data '{"routing_key":"'"$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY"'","event_action":"trigger","payload":{"summary":"'"$message"'","source":"'"${NOTIFICATIONS_SERVICES_PAGERDUTY_EVENT_SOURCE:-Home Assistant Availability Monitor}"'","severity":"critical"}}' "https://events.pagerduty.com/v2/enqueue"; then
     log "err" "Failed to send PagerDuty notification."
     return 1
   fi
@@ -90,27 +90,26 @@ send_pagerduty_notification() {
 send_sms() {
   local to_phone=$1
   local message=$2
-  if [[ "$SMS_METHOD" == "twilio" ]]; then
-    curl "${CURL_BASE_OPTIONS[@]}" -X POST "https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID/Messages.json" \
+  if [[ "$NOTIFICATIONS_SMS_METHOD" == "twilio" ]]; then
+    curl "${CURL_BASE_OPTIONS[@]}" -X POST "https://api.twilio.com/2010-04-01/Accounts/$NOTIFICATIONS_SMS_SETTINGS_TWILIO_ACCOUNT_SID/Messages.json" \
       --data-urlencode "To=$to_phone" \
-      --data-urlencode "From=${TWILIO_FROM:-SMS_FROM}" \
+      --data-urlencode "From=${TWILIO_FROM:-NOTIFICATIONS_SMS_FROM}" \
       --data-urlencode "Body=$message" \
-      -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN" || \
+      -u "$NOTIFICATIONS_SMS_SETTINGS_TWILIO_ACCOUNT_SID:$NOTIFICATIONS_SMS_SETTINGS_TWILIO_AUTH_TOKEN" || \
       log "err" "Failed to send SMS via Twilio to $to_phone."
-  elif [[ "$SMS_METHOD" == "forwardemail" ]]; then
+  elif [[ "$NOTIFICATIONS_SMS_METHOD" == "forwardemail" ]]; then
     curl "${CURL_BASE_OPTIONS[@]}" -X POST https://api.forwardemail.net/v1/emails \
-      --data-urlencode "from=$SMS_FROM" \
+      --data-urlencode "from=$NOTIFICATIONS_SMS_FROM" \
       --data-urlencode "to=$to_phone" \
       --data-urlencode "text=$message" \
-      -u "$FORWARDEMAIL_AUTH_TOKEN:" || \
+      -u "$NOTIFICATIONS_SMS_SETTINGS_FORWARDEMAIL_AUTH_TOKEN:" || \
       log "err" "Failed to send SMS via ForwardEmail.net to $to_phone."
   fi
 }
 
 send_sms_to_multiple() {
   local message=$1
-  IFS=',' read -ra PHONE_NUMBERS <<< "$SMS_TO"
-  for number in "${PHONE_NUMBERS[@]}"; do
+  for number in "${NOTIFICATIONS_SMS_RECIPIENTS[@]}"; do
     log "info" "Sending SMS to $number..."
     # send_sms "$number" "$message"
     retry_send_sms "$number" "$message"
@@ -122,15 +121,16 @@ send_sms_to_multiple() {
 retry_send_sms() {
   local to_phone="$1"
   local message="$2"
-  for ((i=1; i<=RETRY_COUNT; i++)); do
+  local retry_count=${RETRY_COUNT:-${DEFAULT_MONITORING_RETRY_COUNT:-3}}
+  for ((i=1; i<=retry_count; i++)); do
     if send_sms "$to_phone" "$message"; then
       log "info" "SMS successfully sent to $to_phone on attempt $i."
       return 0
     fi
-    log "warn" "SMS attempt $i failed. Retrying in $RETRY_INTERVAL seconds..."
-    sleep "$RETRY_INTERVAL"
+    log "warn" "SMS attempt $i failed. Retrying in ${RETRY_INTERVAL:-${DEFAULT_MONITORING_RETRY_INTERVAL:-60}} seconds..."
+    sleep "${RETRY_INTERVAL:-${DEFAULT_MONITORING_RETRY_INTERVAL:-60}}"
   done
-  log "err" "Failed to send SMS to $to_phone after $RETRY_COUNT attempts."
+  log "err" "Failed to send SMS to $to_phone after $retry_count attempts."
   return 1
 }
 
@@ -139,35 +139,36 @@ send_email() {
   local subject="$1"
   local message="$2"
   
-  if [[ "$MAIL_DRIVER" == "smtp" ]]; then
-    if [[ -z "$MAIL_SMTP_HOST" || -z "$MAIL_SMTP_PORT" || -z "$MAIL_FROM" ]]; then
+  if [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "smtp" ]]; then
+    if [[ -z "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_HOST" || -z "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PORT" || -z "$NOTIFICATIONS_EMAIL_FROM" ]]; then
       log "err" "Missing required SMTP configuration"
       return 1
     fi
     
-    local smtp_args=(-S smtp-use-starttls -S smtp=${MAIL_SMTP_HOST}:${MAIL_SMTP_PORT})
-    [[ -n "$MAIL_USERNAME" ]] && smtp_args+=(-xu "$MAIL_USERNAME")
-    [[ -n "$MAIL_SMTP_PASSWORD" ]] && smtp_args+=(-xp "$MAIL_SMTP_PASSWORD")
+    # local smtp_args=(-S smtp-use-starttls -S smtp=${NOTIFICATIONS_EMAIL_SETTINGS_SMTP_HOST}:${NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PORT})
+    local smtp_args=(-S "smtp-use-starttls" -S "smtp=${NOTIFICATIONS_EMAIL_SETTINGS_SMTP_HOST}:${NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PORT}")
+    [[ -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_USERNAME" ]] && smtp_args+=(-xu "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_USERNAME")
+    [[ -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PASSWORD" ]] && smtp_args+=(-xp "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PASSWORD")
     
     echo "$message" | mail "${smtp_args[@]}" \
-      -r "$MAIL_FROM" \
+      -r "$NOTIFICATIONS_EMAIL_FROM" \
       -s "$subject" \
-      "$MAIL_TO" || return 1
+      "$NOTIFICATIONS_EMAIL_TO" || return 1
 
-  elif [[ "$MAIL_DRIVER" == "sendgrid" ]]; then
-    if [[ -z "$SENDGRID_API_KEY" || -z "$MAIL_FROM" ]]; then
+  elif [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "sendgrid" ]]; then
+    if [[ -z "$NOTIFICATIONS_EMAIL_SETTINGS_SENDGRID_API_KEY" || -z "$NOTIFICATIONS_EMAIL_FROM" ]]; then
       log "err" "Missing required SendGrid configuration"
       return 1
     fi
     
     curl "${CURL_BASE_OPTIONS[@]}" -X POST "https://api.sendgrid.com/v3/mail/send" \
-      -H "Authorization: Bearer $SENDGRID_API_KEY" \
+      -H "Authorization: Bearer $NOTIFICATIONS_EMAIL_SETTINGS_SENDGRID_API_KEY" \
       -H "Content-Type: application/json" \
       --data '{
         "personalizations": [{
-          "to": [{"email": "'"$MAIL_TO"'"}]
+          "to": [{"email": "'"$NOTIFICATIONS_EMAIL_TO"'"}]
         }],
-        "from": {"email": "'"$MAIL_FROM"'"},
+        "from": {"email": "'"$NOTIFICATIONS_EMAIL_FROM"'"},
         "subject": "'"$subject"'",
         "content": [{
           "type": "text/plain",
@@ -181,40 +182,40 @@ send_email() {
 send_notifications_async() {
   local message="$1"
   {
-    # [[ -n "$SMS_TO" ]] && send_sms_to_multiple "$message" &
-    # [[ -n "$SLACK_WEBHOOK_URL" ]] && send_slack_notification "$message" &
-    # [[ -n "$TEAMS_WEBHOOK_URL" ]] && send_teams_notification "$message" &
-    # [[ -n "$DISCORD_WEBHOOK_URL" ]] && send_discord_notification "$message" &
-    # [[ -n "$TELEGRAM_BOT_API_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]] && send_telegram_notification "$message" &
-    # [[ -n "$PAGERDUTY_ROUTING_KEY" ]] && send_pagerduty_notification "$message" &
+    # [[ "$(declare -p NOTIFICATIONS_SMS_RECIPIENTS 2>/dev/null)" =~ "declare -a" ]] && [[ ${#NOTIFICATIONS_SMS_RECIPIENTS[@]} -gt 0 ]] && send_sms_to_multiple "$message" &
+    # [[ -n "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL" ]] && send_slack_notification "$message" &
+    # [[ -n "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL" ]] && send_teams_notification "$message" &
+    # [[ -n "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL" ]] && send_discord_notification "$message" &
+    # [[ -n "$NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN" && -n "$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID" ]] && send_telegram_notification "$message" &
+    # [[ -n "$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY" ]] && send_pagerduty_notification "$message" &
 
     # SMS Notifications
-    if [[ -n "$SMS_TO" ]]; then
+    if [[ "$(declare -p NOTIFICATIONS_SMS_RECIPIENTS 2>/dev/null)" =~ "declare -a" ]] && [[ ${#NOTIFICATIONS_SMS_RECIPIENTS[@]} -gt 0 ]]; then
       send_sms_to_multiple "$message" || log "err" "SMS notification failed."
     fi &
 
     # Slack Notifications
-    if [[ -n "$SLACK_WEBHOOK_URL" ]]; then
+    if [[ -n "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL" ]]; then
       send_slack_notification "$message" || log "err" "Slack notification failed."
     fi &
 
     # Teams Notifications
-    if [[ -n "$TEAMS_WEBHOOK_URL" ]]; then
+    if [[ -n "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL" ]]; then
       send_teams_notification "$message" || log "err" "Teams notification failed."
     fi &
 
     # Discord Notifications
-    if [[ -n "$DISCORD_WEBHOOK_URL" ]]; then
+    if [[ -n "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL" ]]; then
       send_discord_notification "$message" || log "err" "Discord notification failed."
     fi &
 
     # Telegram Notifications
-    if [[ -n "$TELEGRAM_BOT_API_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
+    if [[ -n "$NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN" && -n "$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID" ]]; then
       send_telegram_notification "$message" || log "err" "Telegram notification failed."
     fi &
 
     # PagerDuty Notifications
-    if [[ -n "$PAGERDUTY_ROUTING_KEY" ]]; then
+    if [[ -n "$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY" ]]; then
       send_pagerduty_notification "$message" || log "err" "PagerDuty notification failed."
     fi &
 

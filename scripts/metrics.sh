@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-source "$(dirname "$0")/constants.sh"
-
 # Initialize metrics storage
 declare -A METRICS=(
   ["total_checks"]=0
@@ -14,8 +12,8 @@ declare -A METRICS=(
 )
 
 initialize_metrics() {
-  mkdir -p "$METRICS_DIR"
-  local metrics_file="$METRICS_DIR/metrics.json"
+  mkdir -p "$PATHS_METRICS_DIR"
+  local metrics_file="$PATHS_METRICS_DIR/metrics.json"
   
   if [[ -f "$metrics_file" ]]; then
     while IFS="=" read -r key value; do
@@ -27,11 +25,14 @@ initialize_metrics() {
 }
 
 rotate_metrics() {
-  local max_age=$((METRICS_RETENTION_DAYS * 86400))
-  local current_time=$(date +%s)
+  local retention_days=${METRICS_RETENTION_DAYS:-30}
+  local max_age=$((retention_days * 86400))
+  local current_time
+  current_time=$(date +%s)
   
-  find "$METRICS_DIR" -type f -name "metrics-*.json" | while read -r file; do
-    local file_time=$(stat -c %Y "$file")
+  find "$PATHS_METRICS_DIR" -type f -name "metrics-*.json" | while read -r file; do
+    local file_time
+    file_time=$(stat -c %Y "$file")
     if (( current_time - file_time > max_age )); then
       rm "$file"
     fi
@@ -39,25 +40,29 @@ rotate_metrics() {
 }
 
 save_metrics() {
-  local timestamp=$(date +%s)
-  local metrics_file="$METRICS_DIR/metrics-${timestamp}.json"
+  local timestamp
+  timestamp=$(date +%s)
+  local metrics_file="$PATHS_METRICS_DIR/metrics-${timestamp}.json"
   
   # Save current metrics
   declare -p METRICS > "$metrics_file"
   
   # Keep latest symlink updated
-  ln -sf "$metrics_file" "$METRICS_DIR/metrics-latest.json"
+  ln -sf "$metrics_file" "$PATHS_METRICS_DIR/metrics-latest.json"
   
   # Rotate old files
   rotate_metrics
 }
 
 analyze_trends() {
-  local window_size=${TREND_WINDOW_SIZE}
-  local threshold=${TREND_THRESHOLD}
+  local window_size=${TREND_WINDOW_SIZE:-${DEFAULT_METRICS_TREND_WINDOW_SIZE:-10}}
+  local threshold=${TREND_THRESHOLD:-${DEFAULT_METRICS_TREND_THRESHOLD:-0.8}}
   
   # Get recent metrics files
-  local metrics_files=($(ls -t "$METRICS_DIR"/metrics-*.json 2>/dev/null | head -n "$window_size"))
+  # local metrics_files=($(ls -t "$PATH_METRICS_DIR"/metrics-*.json 2>/dev/null | head -n "$window_size"))
+  local metrics_files
+  # mapfile -t metrics_files < <(ls -t "$PATH_METRICS_DIR"/metrics-*.json 2>/dev/null | head -n "$window_size")
+  mapfile -t metrics_files < <(find "$PATH_METRICS_DIR" -type f -name "metrics-*.json" -print0 | xargs -0 ls -t | head -n "$window_size")
   
   # Need minimum number of samples
   if [[ ${#metrics_files[@]} -lt $window_size ]]; then
@@ -79,7 +84,8 @@ analyze_trends() {
   done
   
   # Calculate trend percentage
-  local trend_percentage=$(echo "scale=2; $trend / $window_size" | bc)
+  local trend_percentage
+  trend_percentage=$(echo "scale=2; $trend / $window_size" | bc)
   
   # Update trend metrics
   METRICS["response_time_trend"]="$trend_percentage"
@@ -94,7 +100,7 @@ analyze_trends() {
 update_metrics() {
   local check_result=$1
   local response_time=$2
-  local endpoint=$3
+  # local endpoint=$3
   
   METRICS["total_checks"]=$((METRICS["total_checks"] + 1))
   METRICS["last_check_timestamp"]=$(date +%s)
@@ -119,9 +125,10 @@ update_metrics() {
   # Add trend analysis
   # Only analyze periodically to avoid excessive processing
   local last_trend_check=${METRICS["last_trend_check"]:-0}
-  local now=$(date +%s)
+  local now
+  now=$(date +%s)
 
-  if (( now - last_trend_check >= TREND_CHECK_INTERVAL )); then
+  if (( now - last_trend_check >= ${TREND_CHECK_INTERVAL:${DEFAULT_METRICS_TREND_CHECK_INTERVAL:-300}} )); then
     analyze_trends
     METRICS["last_trend_check"]=$now
   fi

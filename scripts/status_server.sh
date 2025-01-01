@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091
 
-source "$(dirname "$0")/constants.sh"
 source "$(dirname "$0")/metrics.sh"
 
 start_status_server() {
-  local port=${STATUS_PORT:-$DEFAULT_STATUS_PORT}
+  local port=${STATUS_SERVER_PORT:-${DEFAULT_STATUS_SERVER_PORT:-8080}}
   
   # Create status page HTML template
-  cat > "$TEMP_DIR/status_template.html" <<EOF
+  cat > "$DEFAULT_PATHS_TEMP_DIR/status_template.html" <<EOF
 <!DOCTYPE html>
 <html>
 <head>
@@ -59,17 +59,17 @@ EOF
   while true; do
     nc -l "$port" | while read -r line; do
       if [[ "$line" =~ ^GET\ /metrics ]]; then
-        printf "HTTP/1.1 200 OK\r\n"
+        printf "HTTP/1.1 %s OK\r\n" "${STATUS_SERVER_SUCCESS_CODE:-${DEFAULT_STATUS_SERVER_SUCCESS_CODE:-200}}"
         printf "Content-Type: application/json\r\n"
         printf "Access-Control-Allow-Origin: *\r\n\r\n"
         get_metrics_report
       elif [[ "$line" =~ ^GET\ /status ]]; then
-        printf "HTTP/1.1 200 OK\r\n"
+        printf "HTTP/1.1 %s OK\r\n" "${STATUS_SERVER_SUCCESS_CODE:-${DEFAULT_STATUS_SERVER_SUCCESS_CODE:-200}}"
         printf "Content-Type: text/html\r\n\r\n"
-        cat "$TEMP_DIR/status_template.html"
+        cat "$DEFAULT_PATHS_TEMP_DIR/status_template.html"
       elif [[ "$line" =~ ^GET\ /health ]]; then
         if [[ ${METRICS["consecutive_failures"]} -eq 0 ]]; then
-          printf "HTTP/1.1 200 OK\r\n"
+          printf "HTTP/1.1 %s OK\r\n" "${STATUS_SERVER_SUCCESS_CODE:-${DEFAULT_STATUS_SERVER_SUCCESS_CODE:-200}}"
           printf "Content-Type: application/json\r\n\r\n"
           printf '{"status":"healthy"}\r\n'
         else

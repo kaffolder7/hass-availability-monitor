@@ -1,15 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # utils.sh
 # Utility functions for the Home Assistant Monitor project.
 
 # Constants and Default Values
 SCRIPT_DIR=$(dirname "$0")
-RETRY_COUNT=${RETRY_COUNT:-3}
-RETRY_INTERVAL=${RETRY_INTERVAL:-60}  # Retry interval in seconds
-CHECK_INTERVAL=${CHECK_INTERVAL:-60}  # Interval to recheck when the endpoint is down
-HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-300}  # Interval for health check logs
+# shellcheck disable=SC2034
 ENV_FILE="$SCRIPT_DIR/.env"
-DRY_RUN=${DRY_RUN:-false}  # Enable dry-run mode for testing
 
 # ==============================================
 # Logging Utilities
@@ -37,10 +33,20 @@ rotate_logs() {
       mv "$log_file.$((i-1)).gz" "$log_file.$i.gz"
     fi
   done
-  if [[ -f "$log_file" ]]; then
-    gzip -c "$log_file" > "$log_file.1.gz"
-    > "$log_file"
-    log "info" "Logs rotated and compressed. Latest logs stored in $log_file.1.gz."
+  # if [[ -f "$log_file" ]]; then
+  #   gzip -c "$log_file" > "$log_file.1.gz"
+  #   > "$log_file"
+  #   log "info" "Logs rotated and compressed. Latest logs stored in $log_file.1.gz."
+  # fi
+  if [[ -n "$log_file" && -f "$log_file" ]]; then
+    if gzip -c "$log_file" > "$log_file.1.gz"; then
+      : > "$log_file" # Safely truncate the file
+      log "info" "Logs rotated and compressed. Latest logs stored in '$log_file.1.gz'."
+    else
+      log "error" "Failed to compress log file '$log_file'."
+    fi
+  else
+    log "warning" "Log file '$log_file' does not exist or is not set."
   fi
 }
 
@@ -58,7 +64,8 @@ handle_error() {
   
   # Capture stack trace
   while caller $i >/dev/null 2>&1; do
-    local frame=$(caller $i)
+    local frame
+    frame=$(caller $i)
     stack_trace+="  at ${frame}\n"
     ((i++))
   done
@@ -119,18 +126,18 @@ validate_env_vars() {
   done
 
   # Validate optional variables
-  [[ "$SMS_METHOD" == "forwardemail" && ( -n "$SMS_TO" || -n "$SMS_FROM" || -n "$FORWARDEMAIL_AUTH_TOKEN" ) ]] || log "info" "Email-to-SMS notifications are disabled."
-  [[ "$SMS_METHOD" == "twilio" && ( -n "$SMS_TO" || -n "$TWILIO_ACCOUNT_SID" || -n "$TWILIO_AUTH_TOKEN" || -n "$TWILIO_FROM" ) ]] || log "info" "Twilio SMS notifications are disabled."
-  [[ "$MAIL_DRIVER" == "smtp" && ( -n "$MAIL_SMTP_HOST" || -n "$MAIL_SMTP_PORT" || -n "$MAIL_SMTP_PASSWORD" || -n "$MAIL_FROM" || -n "$MAIL_SUBJECT" ) ]] || log "info" "SMTP email notifications are disabled."
-  [[ "$MAIL_DRIVER" == "sendgrid" && ( -n "$SENDGRID_API_KEY" || -n "$MAIL_FROM" || -n "$MAIL_SUBJECT" ) ]] || log "info" "Sendgrid email notifications are disabled."
-  [[ -n "$SLACK_WEBHOOK_URL" ]] || log "info" "Slack notifications are disabled."
-  [[ -n "$TEAMS_WEBHOOK_URL" ]] || log "info" "Teams notifications are disabled."
-  [[ -n "$DISCORD_WEBHOOK_URL" ]] || log "info" "Discord notifications are disabled."
-  [[ -n "$TELEGRAM_CHAT_ID" || -n "$TELEGRAM_BOT_API_TOKEN" ]] || log "info" "Telegram notifications are disabled."
-  [[ -n "$PAGERDUTY_ROUTING_KEY" ]] || log "info" "PagerDuty notifications are disabled."
+  [[ "$NOTIFICATIONS_SMS_METHOD" == "forwardemail" && ( -n "$SMS_TO" || -n "$NOTIFICATIONS_SMS_FROM" || -n "$NOTIFICATIONS_SMS_SETTINGS_FORWARDEMAIL_AUTH_TOKEN" ) ]] || log "info" "Email-to-SMS notifications are disabled."
+  [[ "$NOTIFICATIONS_SMS_METHOD" == "twilio" && ( -n "$SMS_TO" || -n "$NOTIFICATIONS_SMS_SETTINGS_TWILIO_ACCOUNT_SID" || -n "$NOTIFICATIONS_SMS_SETTINGS_TWILIO_AUTH_TOKEN" || -n "$NOTIFICATIONS_SMS_FROM" ) ]] || log "info" "Twilio SMS notifications are disabled."
+  [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "smtp" && ( -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_HOST" || -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PORT" || -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PASSWORD" || -n "$NOTIFICATIONS_EMAIL_FROM" || -n "$NOTIFICATIONS_EMAIL_SUBJECT" ) ]] || log "info" "SMTP email notifications are disabled."
+  [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "sendgrid" && ( -n "$NOTIFICATIONS_EMAIL_SETTINGS_SENDGRID_API_KEY" || -n "$NOTIFICATIONS_EMAIL_MAIL_FROM" || -n "$NOTIFICATIONS_EMAIL_SUBJECT" ) ]] || log "info" "Sendgrid email notifications are disabled."
+  [[ -n "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL" ]] || log "info" "Slack notifications are disabled."
+  [[ -n "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL" ]] || log "info" "Teams notifications are disabled."
+  [[ -n "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL" ]] || log "info" "Discord notifications are disabled."
+  [[ -n "$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID" || -n "$NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN" ]] || log "info" "Telegram notifications are disabled."
+  [[ -n "$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY" ]] || log "info" "PagerDuty notifications are disabled."
 
   # Warn about unset optional variables
-  [[ -n "$CONTINUOUS_FAILURE_INTERVAL" ]] || log "warn" "CONTINUOUS_FAILURE_INTERVAL is not set. Defaulting to 1800 seconds."
+  [[ -n "${CONTINUOUS_FAILURE_INTERVAL:-${DEFAULT_MONITORING_CONTINUOUS_FAILURE_INTERVAL:-1800}}" ]] || log "warn" "CONTINUOUS_FAILURE_INTERVAL is not set. Defaulting to 1800 seconds."
 }
 
 # ==============================================
@@ -138,14 +145,16 @@ validate_env_vars() {
 # ==============================================
 throttle_notifications() {
   local last_sent_file="/tmp/notification_last_sent"
-  local now=$(date +%s)
+  local now
+  now=$(date +%s)
+  local failure_interval=${CONTINUOUS_FAILURE_INTERVAL:-${DEFAULT_MONITORING_CONTINUOUS_FAILURE_INTERVAL:-1800}}
 
   # Check if the file exists and read the last notification time
   if [[ -f "$last_sent_file" ]]; then
     local last_sent
     last_sent=$(<"$last_sent_file")
-    if ((now - last_sent < CONTINUOUS_FAILURE_INTERVAL)); then
-      log "info" "Throttling notifications. Last sent $(date -d @$last_sent)."
+    if ((now - last_sent < failure_interval)); then
+      log "info" "Throttling notifications. Last sent $(date -d "@$last_sent")."
       return 1
     fi
   fi
@@ -159,18 +168,21 @@ throttle_notifications() {
 # Resource Monitoring Utilities
 # ==============================================
 monitor_resources() {
-  local cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
-  local mem_usage=$(free | grep Mem | awk '{print ($3/$2) * 100.0}')
-  local disk_usage=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+  local cpu_usage
+  local mem_usage
+  local disk_usage
+  cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+  mem_usage=$(free | grep Mem | awk '{print ($3/$2) * 100.0}')
+  disk_usage=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
   
   METRICS["cpu_usage"]="$cpu_usage"
   METRICS["memory_usage"]="$mem_usage"
   METRICS["disk_usage"]="$disk_usage"
   
   # Alert if resources are critically high
-  if (( $(echo "$cpu_usage > $CPU_THRESHOLD" | bc -l) )) || 
-    (( $(echo "$mem_usage > $MEMORY_THRESHOLD" | bc -l) )) || 
-    (( $(echo "$disk_usage > $DISK_THRESHOLD" | bc -l) )); then
+  if (( $(echo "$cpu_usage > ${CPU_THRESHOLD:-${DEFAULT_MONITORING_RESOURCES_CPU_THRESHOLD:-90}}" | bc -l) )) || 
+    (( $(echo "$mem_usage > ${MEMORY_THRESHOLD:-${DEFAULT_MONITORING_RESOURCES_MEMORY_THRESHOLD:-90}}" | bc -l) )) || 
+    (( $(echo "$disk_usage > ${DISK_THRESHOLD:-${DEFAULT_MONITORING_RESOURCES_DISK_THRESHOLD:-90}}" | bc -l) )); then
     log "warn" "System resources critically high: CPU: ${cpu_usage}%, MEM: ${mem_usage}%, DISK: ${disk_usage}%"
     send_notifications_async "System resources alert - CPU: ${cpu_usage}%, Memory: ${mem_usage}%, Disk: ${disk_usage}%"
   fi
@@ -180,7 +192,7 @@ monitor_resources() {
 start_resource_monitoring() {
   while true; do
     monitor_resources
-    sleep "$RESOURCE_CHECK_INTERVAL"
+    sleep "${RESOURCES_CHECK_INTERVAL:-${DEFAULT_MONITORING_RESOURCES_CHECK_INTERVAL:-300}}"
   done &
 }
 
