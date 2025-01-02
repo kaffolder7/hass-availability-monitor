@@ -36,8 +36,10 @@ default:
       check_interval: 300  # Check trends every 5 minutes
 
   cache:
-    ttl: 30  # Cache TTL in seconds
+    enabled: true
     size_limit: 1000  # Maximum number of cached entries
+    ttl: 30  # Cache TTL in seconds
+    metrics_enabled: true
   
   status:
     server:

@@ -4,66 +4,11 @@
 source "$(dirname "$0")/security.sh"
 # shellcheck disable=SC1091
 source "$(dirname "$0")/metrics.sh"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/cache_manager.sh"
 
-declare -A REQUEST_CACHE
-declare -A CACHE_TIMESTAMPS
-
-cache_request() {
-  local url="$1"
-  local response="$2"
-  local timestamp
-  timestamp=$(date +%s)
-  
-  REQUEST_CACHE["$url"]="$response"
-  CACHE_TIMESTAMPS["$url"]="$timestamp"
-}
-
-get_cached_request() {
-  local url="$1"
-  local cache_ttl=${CACHE_TTL:-${DEFAULT_CACHE_TTL:-30}}  # 30 seconds default
-  local timestamp=${CACHE_TIMESTAMPS["$url"]}
-  local now
-  now=$(date +%s)
-  
-  if [[ -n "$timestamp" && $((now - timestamp)) -lt $cache_ttl ]]; then
-    echo "${REQUEST_CACHE["$url"]}"
-    return 0
-  fi
-  return 1
-}
-
-cleanup_cache() {
-  local cache_limit=${CACHE_SIZE_LIMIT:-${DEFAULT_CACHE_SIZE_LIMIT:-1000}}
-  local now
-  now=$(date +%s)
-  
-  # Remove expired entries
-  for url in "${!CACHE_TIMESTAMPS[@]}"; do
-    ttl=${CACHE_TTL:-${DEFAULT_CACHE_TTL:-30}}
-    if (( now - CACHE_TIMESTAMPS["$url"] >= ttl )); then
-      unset "REQUEST_CACHE[$url]"
-      unset "CACHE_TIMESTAMPS[$url]"
-    fi
-  done
-  
-  # If still too many entries, remove oldest
-  while [[ ${#REQUEST_CACHE[@]} -gt $cache_limit ]]; do
-  # request_cache_count=${#REQUEST_CACHE[@]}
-  # while [[ $request_cache_count -gt $cache_limit ]]; do
-    local oldest_url
-    local oldest_time=$now
-    
-    for url in "${!CACHE_TIMESTAMPS[@]}"; do
-      if (( CACHE_TIMESTAMPS["$url"] < oldest_time )); then
-        oldest_time=${CACHE_TIMESTAMPS["$url"]}
-        oldest_url=$url
-      fi
-    done
-    
-    unset "REQUEST_CACHE[$oldest_url]"
-    unset "CACHE_TIMESTAMPS[$oldest_url]"
-  done
-}
+# Initialize cache with configuration from config.yaml
+init_cache "${CACHE_SIZE_LIMIT:-${DEFAULT_CACHE_SIZE_LIMIT:-1000}}" "${CACHE_TTL:-${DEFAULT_CACHE_TTL:-30}}" "${CACHE_ENABLED:-${DEFAULT_CACHE_ENABLED:-true}}"
 
 check_endpoints_async() {
   local endpoints=("$@")
@@ -145,8 +90,8 @@ check_api_with_backoff() {
   local retry_count=${RETRY_COUNT:-${DEFAULT_MONITORING_RETRY_COUNT:-3}}
   local attempt=1
 
-  # Try cache first
-  if response=$(get_cached_request "$url"); then
+  # Try to get from cache first
+  if response=$(cache_get "$url"); then
     log "info" "[CACHE] Using cached response for $url"
     return 0
   fi
@@ -161,18 +106,20 @@ check_api_with_backoff() {
         
     if [[ "$response_code" -eq ${MONITORING_SUCCESS_CODE:-${DEFAULT_MONITORING_SUCCESS_CODE:-200}} ]]; then
       log "info" "API request to $url succeeded on attempt $attempt."
+      
       # Cache successful response
-      cache_request "$url" "$response_code"
+      cache_set "$url" "$response_code"
+
       return 0
     else
       log "err" "API request to $url failed with response code $response_code on attempt $attempt."
-      # Clear cache on failure
-      unset "REQUEST_CACHE[$url]"
-      unset "CACHE_TIMESTAMPS[$url]"
+      
+      # Remove failed response from cache if it exists
+      cache_remove "$url"
       
       if (( attempt < retry_count )); then
         local sleep_time
-        sleep_time=$(exponential_backoff "$attempt" "${RETRY_INTERVAL:-DEFAULT_MONITORING_RETRY_INTERVAL}")
+        sleep_time=$(exponential_backoff "$attempt" "${RETRY_INTERVAL:-${DEFAULT_MONITORING_RETRY_INTERVAL:-60}}")
         log "info" "Retrying $url in $sleep_time seconds..."
         sleep "$sleep_time"
       fi

@@ -11,6 +11,12 @@ declare -A METRICS=(
   ["uptime_percentage"]=100
 )
 
+declare -A CACHE_METRICS=(
+  ["cache_hits"]=0
+  ["cache_misses"]=0
+  ["cache_evictions"]=0
+)
+
 initialize_metrics() {
   mkdir -p "$PATHS_METRICS_DIR"
   local metrics_file="$PATHS_METRICS_DIR/metrics.json"
@@ -137,6 +143,12 @@ update_metrics() {
 }
 
 get_metrics_report() {
+  # Get cache statistics if caching is enabled
+  local cache_stats="{}"
+  if type get_cache_stats &>/dev/null; then
+    cache_stats=$(get_cache_stats)
+  fi
+
   local report
   report=$(cat <<EOF
 {
@@ -148,6 +160,7 @@ get_metrics_report() {
   "consecutive_failures": ${METRICS["consecutive_failures"]},
   "uptime_percentage": ${METRICS["uptime_percentage"]},
   "response_time_trend": ${METRICS["response_time_trend"]:-0}
+  "cache": $cache_stats,
 }
 EOF
   )
