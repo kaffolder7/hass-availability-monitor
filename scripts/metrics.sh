@@ -143,26 +143,115 @@ update_metrics() {
 }
 
 get_metrics_report() {
+  # Get current timestamp for report generation time
+  local report_timestamp
+  report_timestamp=$(date +%s)
+
+  # Get system resource metrics
+  local cpu_usage
+  local mem_usage
+  local disk_usage
+  cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+  mem_usage=$(free | grep Mem | awk '{print ($3/$2) * 100.0}')
+  disk_usage=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+
   # Get cache statistics if caching is enabled
   local cache_stats="{}"
   if type get_cache_stats &>/dev/null; then
     cache_stats=$(get_cache_stats)
   fi
 
+  # Calculate uptime percentage
+  local total_checks=${METRICS["total_checks"]}
+  local failed_checks=${METRICS["failed_checks"]}
+  local uptime_percentage=0
+  if [[ $total_checks -gt 0 ]]; then
+    uptime_percentage=$(( ((total_checks - failed_checks) * 100) / total_checks ))
+  fi
+
+  # Create the comprehensive metrics report
   local report
   report=$(cat <<EOF
 {
-  "total_checks": ${METRICS["total_checks"]},
-  "failed_checks": ${METRICS["failed_checks"]},
-  "total_notifications": ${METRICS["total_notifications"]},
-  "avg_response_time": ${METRICS["avg_response_time"]},
-  "last_check_timestamp": ${METRICS["last_check_timestamp"]},
-  "consecutive_failures": ${METRICS["consecutive_failures"]},
-  "uptime_percentage": ${METRICS["uptime_percentage"]},
-  "response_time_trend": ${METRICS["response_time_trend"]:-0}
+  "report_timestamp": $report_timestamp,
+  "monitoring": {
+    "total_checks": ${METRICS["total_checks"]},
+    "failed_checks": ${METRICS["failed_checks"]},
+    "successful_checks": $((total_checks - failed_checks)),
+    "uptime_percentage": ${METRICS["uptime_percentage"]},
+    "consecutive_failures": ${METRICS["consecutive_failures"]},
+    "last_check_timestamp": ${METRICS["last_check_timestamp"]},
+    "avg_response_time_ms": ${METRICS["avg_response_time"]},
+    "response_time_trend": ${METRICS["response_time_trend"]:-0}
+  },
+  "notifications": {
+    "total_sent": ${METRICS["total_notifications"]},
+    "last_notification_time": ${METRICS["last_notification_time"]:-0},
+    "notification_errors": ${METRICS["notification_errors"]:-0}
+  },
+  "system_resources": {
+    "cpu_usage_percent": $cpu_usage,
+    "memory_usage_percent": $mem_usage,
+    "disk_usage_percent": $disk_usage
+  },
   "cache": $cache_stats,
+  "errors": {
+    "last_error": "${METRICS["last_error"]:-none}",
+    "last_error_time": ${METRICS["last_error_time"]:-0},
+    "error_count": ${METRICS["error_count"]:-0}
+  }
 }
 EOF
   )
-  echo "$report"
+
+  # Pretty print if requested
+  if [[ "${1:-}" == "--pretty" ]]; then
+    echo "$report" | jq '.'
+  else
+    echo "$report"
+  fi
+
+  # Update metrics file
+  echo "$report" > "$PATHS_METRICS_DIR/metrics-latest.json.tmp"
+  mv "$PATHS_METRICS_DIR/metrics-latest.json.tmp" "$PATHS_METRICS_DIR/metrics-latest.json"
+
+  return 0
 }
+
+get_metric() {
+  local metric_path="$1"
+  local report
+  report=$(get_metrics_report)
+  echo "$report" | jq -r ".$metric_path"
+}
+
+# Export metrics in Prometheus format
+export_prometheus_metrics() {
+  local report
+  report=$(get_metrics_report)
+
+  # Convert JSON metrics to Prometheus format
+  {
+    echo "# HELP hass_monitor_total_checks Total number of API checks performed"
+    echo "# TYPE hass_monitor_total_checks counter"
+    echo "hass_monitor_total_checks $(echo "$report" | jq '.monitoring.total_checks')"
+    
+    echo "# HELP hass_monitor_uptime_percentage Percentage of successful checks"
+    echo "# TYPE hass_monitor_uptime_percentage gauge"
+    echo "hass_monitor_uptime_percentage $(echo "$report" | jq '.monitoring.uptime_percentage')"
+    
+    echo "# HELP hass_monitor_response_time Average response time in milliseconds"
+    echo "# TYPE hass_monitor_response_time gauge"
+    echo "hass_monitor_response_time $(echo "$report" | jq '.monitoring.avg_response_time_ms')"
+    
+    echo "# HELP hass_monitor_system_cpu_usage CPU usage percentage"
+    echo "# TYPE hass_monitor_system_cpu_usage gauge"
+    echo "hass_monitor_system_cpu_usage $(echo "$report" | jq '.system_resources.cpu_usage_percent')"
+  } > "$PATHS_METRICS_DIR/metrics.prom"
+}
+
+# Usage examples:
+# get_metrics_report                          # Get JSON report
+# get_metrics_report --pretty                 # Get formatted JSON report
+# get_metric "monitoring.uptime_percentage"   # Get specific metric
+# export_prometheus_metrics                   # Export metrics in Prometheus format
