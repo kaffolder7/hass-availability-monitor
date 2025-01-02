@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Configuration Validation Module (config_validator.sh)
 
+# set -a  # Mark all variables and functions for export
 # shellcheck disable=SC1091
 source "$(dirname "$0")/utils.sh"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/logging.sh"
+# set +a  # Stop marking for export
 
 # Validation rules for different configuration types
 declare -A VALIDATION_RULES=(
@@ -194,19 +198,19 @@ validate_config() {
   
   # Check file existence and readability
   if [[ ! -f "$config_file" ]]; then
-    log "error" "Configuration file not found: $config_file"
+    log "ERROR" "Configuration file not found: $config_file"
     return 1
   fi
   
   if [[ ! -r "$config_file" ]]; then
-    log "error" "Cannot read configuration file: $config_file"
+    log "ERROR" "Cannot read configuration file: $config_file"
     return 1
   fi
   
   # Parse YAML configuration
   local config_data
   config_data=$(yq eval '.' "$config_file") || {
-    log "error" "Invalid YAML syntax in $config_file"
+    log "ERROR" "Invalid YAML syntax in $config_file"
     return 1
   }
   
@@ -245,12 +249,12 @@ validate_config() {
   
   # Report all errors
   if [[ ${#errors[@]} -gt 0 ]]; then
-    log "error" "Configuration validation failed:"
+    log "ERROR" "Configuration validation failed:"
     printf '%s\n' "${errors[@]}" >&2
     return 1
   fi
   
-  log "info" "Configuration validation successful"
+  log "INFO" "Configuration validation successful"
   return 0
 }
 

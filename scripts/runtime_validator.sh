@@ -41,7 +41,7 @@ declare -A DEFAULT_CONFIGS=(
   ["CACHE_ENABLED"]="true"
   ["CACHE_TTL"]="30"
   ["CACHE_SIZE_LIMIT"]="1000"
-  ["LOG_LEVEL"]="info"
+  # ["LOG_LEVEL"]="info"
 )
 
 validate_runtime_config() {
@@ -49,10 +49,10 @@ validate_runtime_config() {
   local errors=()
   local warnings=()
 
-  log "info" "Starting runtime configuration validation for environment: $environment"
+  log "INFO" "Starting runtime configuration validation for environment: $environment"
 
   # Step 1: Check required configurations
-  log "debug" "Validating required configurations..."
+  log "DEBUG" "Validating required configurations..."
   for config_name in "${!REQUIRED_CONFIGS[@]}"; do
     local rules="${REQUIRED_CONFIGS[$config_name]}"
     local value="${!config_name}"
@@ -85,7 +85,7 @@ validate_runtime_config() {
 
   # Step 2: Environment-specific validations
   if [[ "$environment" == "production" ]]; then
-    log "debug" "Performing production-specific validations..."
+    log "DEBUG" "Performing production-specific validations..."
     
     # Validate API URL for HTTPS
     if [[ ! "$HASS_API_URL" =~ ^https:// ]]; then
@@ -104,7 +104,7 @@ validate_runtime_config() {
   fi
 
   # Step 3: Validate interrelated configurations
-  log "debug" "Validating configuration relationships..."
+  log "DEBUG" "Validating configuration relationships..."
   
   # Check that retry interval is less than check interval
   if (( $(echo "$MONITORING_RETRY_INTERVAL * $MONITORING_RETRY_COUNT >= $MONITORING_CHECK_INTERVAL" | bc -l) )); then
@@ -127,17 +127,17 @@ validate_runtime_config() {
 
   # Step 4: Report validation results
   if [[ ${#warnings[@]} -gt 0 ]]; then
-    log "warn" "Configuration warnings:"
+    log "WARN" "Configuration warnings:"
     printf '%s\n' "${warnings[@]}" >&2
   fi
 
   if [[ ${#errors[@]} -gt 0 ]]; then
-    log "error" "Runtime configuration validation failed:"
+    log "ERROR" "Runtime configuration validation failed:"
     printf '%s\n' "${errors[@]}" >&2
     return 1
   fi
 
-  log "info" "Runtime configuration validation successful"
+  log "INFO" "Runtime configuration validation successful"
   return 0
 }
 
@@ -171,7 +171,7 @@ check_required_services() {
   done
   
   if [[ ${#errors[@]} -gt 0 ]]; then
-    log "error" "Service availability check failed:"
+    log "ERROR" "Service availability check failed:"
     printf '%s\n' "${errors[@]}" >&2
     return 1
   fi
@@ -184,17 +184,17 @@ validate_runtime() {
   local start_time
   start_time=$(date +%s%N)
   
-  log "info" "Starting runtime validation"
+  log "INFO" "Starting runtime validation"
   
   # Step 1: Validate configuration
   if ! validate_runtime_config; then
-    log "error" "Runtime configuration validation failed"
+    log "ERROR" "Runtime configuration validation failed"
     return 1
   fi
   
   # Step 2: Check required services
   if ! check_required_services; then
-    log "error" "Required services check failed"
+    log "ERROR" "Required services check failed"
     return 1
   fi
   
@@ -204,6 +204,6 @@ validate_runtime() {
   local duration
   duration=$(( (end_time - start_time) / 1000000 )) # Convert to milliseconds
   
-  log "info" "Runtime validation completed in ${duration}ms"
+  log "INFO" "Runtime validation completed in ${duration}ms"
   return 0
 }

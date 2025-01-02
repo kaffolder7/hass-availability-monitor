@@ -40,7 +40,7 @@ init_cache() {
   CACHE_METRICS["size"]=0
   CACHE_METRICS["hit_rate"]=0
 
-  log "info" "Cache initialized with size=$cache_size, ttl=$cache_ttl, enabled=$cache_enabled"
+  log "INFO" "Cache initialized with size=$cache_size, ttl=$cache_ttl, enabled=$cache_enabled"
 }
 
 # Set cache entry
@@ -72,7 +72,7 @@ cache_set() {
   # Update metrics
   CACHE_METRICS["size"]=${#CACHE_KEYS[@]}
 
-  log "debug" "Cache entry set: key=$key, ttl=$ttl"
+  log "DEBUG" "Cache entry set: key=$key, ttl=$ttl"
 }
 
 # Get cache entry
@@ -136,7 +136,7 @@ cache_remove() {
     # Update metrics
     CACHE_METRICS["size"]=${#CACHE_KEYS[@]}
     
-    log "debug" "Cache entry removed: key=$key"
+    log "DEBUG" "Cache entry removed: key=$key"
   fi
 }
 
@@ -152,7 +152,7 @@ evict_lru_entry() {
   # Update metrics
   CACHE_METRICS["evictions"]=$((CACHE_METRICS["evictions"] + 1))
   
-  log "debug" "Cache entry evicted: key=$lru_key"
+  log "DEBUG" "Cache entry evicted: key=$lru_key"
 }
 
 # Update LRU order
@@ -188,7 +188,7 @@ cache_clear() {
   # Reset metrics
   CACHE_METRICS["size"]=0
   
-  log "info" "Cache cleared"
+  log "INFO" "Cache cleared"
 }
 
 # Get cache statistics

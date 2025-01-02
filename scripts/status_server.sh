@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091
-source "$(dirname "$0")/metrics.sh"
-# shellcheck disable=SC1091
 source "$(dirname "$0")/utils.sh"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/logging.sh"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/metrics.sh"
 
 # Server configuration
 declare -r DEFAULT_PORT=${STATUS_SERVER_PORT:-${DEFAULT_STATUS_SERVER_PORT:-8080}}
@@ -304,7 +306,7 @@ start_status_server() {
   # Create the HTML template
   create_status_template
   
-  log "info" "Starting status server on $host:$port"
+  log "INFO" "Starting status server on $host:$port"
   
   # Use netcat to listen for incoming connections
   while true; do
@@ -326,7 +328,7 @@ stop_status_server() {
     pid=$(<"$PATHS_TEMP_DIR/status_server.pid")
     kill "$pid" 2>/dev/null || true
     rm -f "$PATHS_TEMP_DIR/status_server.pid"
-    log "info" "Status server stopped"
+    log "INFO" "Status server stopped"
   fi
 }
 

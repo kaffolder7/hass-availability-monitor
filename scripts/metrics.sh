@@ -98,7 +98,7 @@ analyze_trends() {
   
   # Alert if consistent upward trend
   if (( $(echo "$trend_percentage > $threshold" | bc -l) )); then
-    log "warn" "Response time degradation detected: ${trend_percentage}% increasing trend"
+    log "WARN" "Response time degradation detected: ${trend_percentage}% increasing trend"
     send_notifications_async "Warning: Response times showing consistent degradation (${trend_percentage}% trend)"
   fi
 }

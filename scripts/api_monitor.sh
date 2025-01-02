@@ -36,7 +36,7 @@ check_endpoints_async() {
     
     # Validate endpoint
     if ! validate_url "$endpoint"; then
-      log "err" "Invalid endpoint URL: $endpoint"
+      log "ERROR" "Invalid endpoint URL: $endpoint"
       continue
     fi
     
@@ -92,7 +92,7 @@ check_api_with_backoff() {
 
   # Try to get from cache first
   if response=$(cache_get "$url"); then
-    log "info" "[CACHE] Using cached response for $url"
+    log "INFO" "[CACHE] Using cached response for $url"
     return 0
   fi
   
@@ -105,14 +105,14 @@ check_api_with_backoff() {
       "$url")
         
     if [[ "$response_code" -eq ${MONITORING_SUCCESS_CODE:-${DEFAULT_MONITORING_SUCCESS_CODE:-200}} ]]; then
-      log "info" "API request to $url succeeded on attempt $attempt."
+      log "INFO" "API request to $url succeeded on attempt $attempt."
       
       # Cache successful response
       cache_set "$url" "$response_code"
 
       return 0
     else
-      log "err" "API request to $url failed with response code $response_code on attempt $attempt."
+      log "ERROR" "API request to $url failed with response code $response_code on attempt $attempt."
       
       # Remove failed response from cache if it exists
       cache_remove "$url"
@@ -120,13 +120,13 @@ check_api_with_backoff() {
       if (( attempt < retry_count )); then
         local sleep_time
         sleep_time=$(exponential_backoff "$attempt" "${RETRY_INTERVAL:-${DEFAULT_MONITORING_RETRY_INTERVAL:-60}}")
-        log "info" "Retrying $url in $sleep_time seconds..."
+        log "INFO" "Retrying $url in $sleep_time seconds..."
         sleep "$sleep_time"
       fi
     fi
     ((attempt++))
   done
   
-  log "err" "API request to $url failed after $retry_count attempts."
+  log "ERROR" "API request to $url failed after $retry_count attempts."
   return 1
 }

@@ -5,19 +5,19 @@ validate_url() {
   
   # Check URL format
   if [[ ! "$url" =~ ^https?:// ]]; then
-    log "err" "Invalid URL format: $url"
+    log "ERROR" "Invalid URL format: $url"
     return 1
   fi
   
   # Validate URL characters
   if [[ ! "$url" =~ ^[A-Za-z0-9\-\.\_\~\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=\%]*$ ]]; then
-    log "err" "URL contains invalid characters: $url"
+    log "ERROR" "URL contains invalid characters: $url"
     return 1
   fi
   
   # Require HTTPS for production
   if [[ "${ENVIRONMENT:-production}" == "production" && ! "$url" =~ ^https:// ]]; then
-    log "err" "Production endpoints must use HTTPS: $url"
+    log "ERROR" "Production endpoints must use HTTPS: $url"
     return 1
   fi
   
@@ -29,7 +29,7 @@ validate_token() {
   
   # Check token format (JWT or simple token)
   if [[ ! "$token" =~ ^[A-Za-z0-9._~+/-]+=*$ ]]; then
-    log "err" "Invalid token format"
+    log "ERROR" "Invalid token format"
     return 1
   fi
   
@@ -37,7 +37,7 @@ validate_token() {
   if [[ ${#token} -lt 32 ]]; then
   # token_length=${#token}
   # if [[ $token_length -lt 32 ]]; then
-    log "err" "Token too short, security risk"
+    log "ERROR" "Token too short, security risk"
     return 1
   fi
   

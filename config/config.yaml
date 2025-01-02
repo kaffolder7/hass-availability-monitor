@@ -46,6 +46,14 @@ default:
       port: 8080
       host: 0.0.0.0
 
+  logging:
+    level: "INFO"                             # Default log level
+    max_size: 1048576                         # Max file size in bytes (1MB)
+    max_files: 7                              # Number of rotated files to keep
+    syslog_enabled: true                      # Enable syslog integration
+    file_name: "home_assistant_monitor.log"   # Log file name
+    # file: "/var/log/home_assistant_monitor.log"
+
   paths:
     log_dir: "/var/log/home_assistant_monitor"
     metrics_dir: "/var/lib/home_assistant_monitor/metrics"

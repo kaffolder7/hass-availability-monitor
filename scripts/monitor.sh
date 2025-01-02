@@ -5,9 +5,10 @@
 # Load dependencies
 # source "$(dirname "$0")/shell_constants.sh" || { echo "Failed to load constants. Exiting."; exit 1; }
 source "$(dirname "$0")/utils.sh" || { echo "Failed to load utilities. Exiting."; exit 1; }
+source "$(dirname "$0")/logging.sh" || { echo "Failed to load logging. Exiting."; exit 1; }
 source "$(dirname "$0")/config_loader.sh" || { echo "Failed to load configuration. Exiting."; exit 1; }
 source "$(dirname "$0")/runtime_validator.sh" || { echo "Failed to runtime configuration. Exiting."; exit 1; }
-source "$(dirname "$0")/logging.sh" || { echo "Failed to load logging. Exiting."; exit 1; }
+# source "$(dirname "$0")/logging.sh" || { echo "Failed to load logging. Exiting."; exit 1; }
 source "$(dirname "$0")/metrics.sh" || { echo "Failed to load metrics. Exiting."; exit 1; }
 source "$(dirname "$0")/status_server.sh" || { echo "Failed to load status server. Exiting."; exit 1; }
 source "$(dirname "$0")/api_monitor.sh" || { echo "Failed to load API monitoring logic. Exiting."; exit 1; }
@@ -22,8 +23,14 @@ declare -g CLEANUP_DONE=false
 initialize_app() {
   local start_time
   start_time=$(date +%s%N)
+
+  # Initialize logging first, and rotate if needed
+  if ! initialize_logging; then
+    echo "Failed to initialize logging" >&2
+    exit 1
+  fi
   
-  log "info" "Initializing Home Assistant Monitor..."
+  log "INFO" "Starting Home Assistant Monitor..."
   
   # Create required directories
   mkdir -p "${PATHS_LOG_DIR:-/var/log/home_assistant_monitor}"
@@ -34,9 +41,6 @@ initialize_app() {
   trap cleanup SIGTERM SIGINT SIGQUIT
   trap handle_error ERR
 
-  # Initialize logging and rotate if needed
-  initialize_logging
-
   # Initialize metrics
   initialize_metrics
   
@@ -44,7 +48,7 @@ initialize_app() {
   end_time=$(date +%s%N)
   local duration_ms=$(( (end_time - start_time) / 1000000 ))
   
-  log "info" "Initialization completed in ${duration_ms}ms"
+  log "INFO" "Initialization completed in ${duration_ms}ms"
   return 0
 }
 
@@ -53,8 +57,8 @@ handle_error() {
   local error_code=$?
   local line_number=$1
   
-  log "error" "Error occurred in script at line $line_number"
-  log "error" "Exit code: $error_code"
+  log "ERROR" "Error occurred in script at line $line_number"
+  log "ERROR" "Exit code: $error_code"
   
   # Get stack trace
   local stack_trace=""
@@ -65,7 +69,7 @@ handle_error() {
     stack_trace+="  at $sub ($file:$line)\n"
   done
   
-  log "error" "Stack trace:\n$stack_trace"
+  log "ERROR" "Stack trace:\n$stack_trace"
   
   # Perform cleanup if not already done
   if [[ "$CLEANUP_DONE" != "true" ]]; then
@@ -82,24 +86,24 @@ cleanup() {
     return
   fi
 
-  log "info" "Starting cleanup process..."
+  log "INFO" "Starting cleanup process..."
 
   # Stop monitoring process if running
   if [[ -n "$MONITOR_PID" ]]; then
-    log "info" "Stopping monitoring process..."
+    log "INFO" "Stopping monitoring process..."
     kill -TERM "$MONITOR_PID" 2>/dev/null || true
     wait "$MONITOR_PID" 2>/dev/null || true
   fi
   
   # Stop status server if running
   if [[ -n "$SERVER_PID" ]]; then
-    log "info" "Stopping status server..."
+    log "INFO" "Stopping status server..."
     kill -TERM "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
   fi
 
   # Save final metrics
-  log "info" "Saving final metrics..."
+  log "INFO" "Saving final metrics..."
   save_metrics
 
   # # Kill all background jobs
@@ -107,7 +111,7 @@ cleanup() {
   # # jobs -p | xargs -r kill 2>/dev/null
 
   # Clean up temporary files
-  log "info" "Cleaning up temporary files..."
+  log "INFO" "Cleaning up temporary files..."
   rm -f "/tmp/notification_last_sent"
   rm -f "$named_pipe"
   rm -f "${PATHS_TEMP_DIR:-/tmp/home_assistant_monitor}"/*.tmp
@@ -115,15 +119,15 @@ cleanup() {
 
   # Send final notification if there were active issues
   if [[ ${METRICS["consecutive_failures"]} -gt 0 ]]; then
-    log "warn" "Sending shutdown notification due to active issues..."
+    log "WARN" "Sending shutdown notification due to active issues..."
     send_notifications_async "Monitor shutting down with active issues"
   fi
   
   CLEANUP_DONE=true
-  log "info" "Cleanup completed"
+  log "INFO" "Cleanup completed"
   
   # exit 0
-  # log "info" "Cleanup completed. Exiting."
+  # log "INFO" "Cleanup completed. Exiting."
   # exit 1
 }
 
@@ -131,29 +135,29 @@ cleanup() {
 
 # Start the monitoring service
 start_monitoring() {
-  log "info" "Starting monitoring service..."
+  log "INFO" "Starting monitoring service..."
   
   # Start status server
   if ! start_status_server; then
-    log "error" "Failed to start status server"
+    log "ERROR" "Failed to start status server"
     return 1
   fi
   SERVER_PID=$!
-  log "info" "Status server started with PID $SERVER_PID"
+  log "INFO" "Status server started with PID $SERVER_PID"
   
   # Start resource monitoring
   # if ! start_resource_monitoring; then
-    log "error" "Failed to start resource monitoring"
+    log "ERROR" "Failed to start resource monitoring"
     return 1
   fi
   
   # Start API monitoring
   if ! monitor_endpoints; then
-    log "error" "Failed to start API monitoring"
+    log "ERROR" "Failed to start API monitoring"
     return 1
   fi
   MONITOR_PID=$!
-  log "info" "Monitoring process started with PID $MONITOR_PID"
+  log "INFO" "Monitoring process started with PID $MONITOR_PID"
   
   # Wait for monitoring process
   wait "$MONITOR_PID"
@@ -165,7 +169,7 @@ log_health_check() {
   local up_count
   up_count=$(check_endpoints_async "${endpoints[@]}" | grep -c "succeeded")
   local down_count=$((total_endpoints - up_count))
-  log "info" "Health Check: $up_count/$total_endpoints endpoints are up. $down_count are down."
+  log "INFO" "Health Check: $up_count/$total_endpoints endpoints are up. $down_count are down."
 }
 
 # Monitor Endpoints
@@ -180,7 +184,7 @@ log_health_check() {
 #   local downtime_start=0
 #   while true; do
 #     if ! check_endpoints_async "${endpoints[@]}"; then
-#       log "err" "One or more endpoints are down. Sending notifications..."
+#       log "ERROR" "One or more endpoints are down. Sending notifications..."
 #       downtime_start=$(date +%s)
 #       send_notifications_async "${NOTIFICATIONS_MESSAGES_DOWN:-API is unavailable. Monitoring for recovery...}"
 
@@ -194,13 +198,13 @@ log_health_check() {
 #         fi
 #         sleep "${CHECK_INTERVAL:-${DEFAULT_MONITORING_CHECK_INTERVAL:-300}}"
 #         if check_endpoints_async "${endpoints[@]}"; then
-#           log "info" "All endpoints are back online. Sending recovery notifications..."
+#           log "INFO" "All endpoints are back online. Sending recovery notifications..."
 #           send_notifications_async "${NOTIFICATIONS_MESSAGES_UP:-API is back online!}"
 #           break
 #         fi
 #       done
 #     else
-#       # log "info" "Health Check: All monitored endpoints are up."
+#       # log "INFO" "Health Check: All monitored endpoints are up."
 #       log_health_check
 #       sleep "${HEALTH_CHECK_INTERVAL:-${DEFAULT_MONITORING_HEALTH_CHECK_INTERVAL:-600}}"
 #     fi
@@ -221,13 +225,13 @@ monitor_endpoints() {
     done
 
     if [[ "${#failed_endpoints[@]}" -gt 0 ]]; then
-      log "err" "Endpoints down: ${failed_endpoints[*]}"
+      log "ERROR" "Endpoints down: ${failed_endpoints[*]}"
 
       # Throttle notifications to avoid spamming
       if throttle_notifications; then
         send_batched_notifications "${failed_endpoints[@]}"
       else
-        log "info" "Notification throttled. No new notifications sent."
+        log "INFO" "Notification throttled. No new notifications sent."
       fi
 
       # Enter downtime loop
@@ -241,7 +245,7 @@ monitor_endpoints() {
           if throttle_notifications; then
             send_batched_notifications "${failed_endpoints[@]}"
           else
-            log "info" "Throttled periodic notification during downtime."
+            log "INFO" "Throttled periodic notification during downtime."
           fi
         fi
 
@@ -257,7 +261,7 @@ monitor_endpoints() {
 
         # If all endpoints recover, exit downtime loop
         if [[ "${#new_failed_endpoints[@]}" -eq 0 ]]; then
-          log "info" "All endpoints are back online."
+          log "INFO" "All endpoints are back online."
           send_notifications_async "All endpoints are back online."
           break
         fi
@@ -265,7 +269,7 @@ monitor_endpoints() {
         failed_endpoints=("${new_failed_endpoints[@]}")
       done
     else
-      # log "info" "All endpoints are operational."
+      # log "INFO" "All endpoints are operational."
       log_health_check
       sleep "${HEALTH_CHECK_INTERVAL:-${DEFAULT_MONITORING_HEALTH_CHECK_INTERVAL:-600}}"
     fi
@@ -290,29 +294,41 @@ monitor_endpoints() {
 main() {
   local start_time
   start_time=$(date +%s%N)
+
+  # Set proper log level from config
+  set_log_level "${LOGGING_LEVEL:-${DEFAULT_LOGGING_LEVEL:-INFO}}"
+
+  # Log at different levels
+  # log "INFO" "Application starting..."
+  # log "DEBUG" "Detailed debug information"
+  # log "ERROR" "Something went wrong!"
+
+  # Get status
+  # status=$(get_logging_status)
+  # echo "$status"
   
   # Step 1: Initialize application
   if ! initialize_app; then
-    log "error" "Failed to initialize application"
+    log "ERROR" "Failed to initialize application"
     exit 1
   fi
   
   # Step 2: Load configuration
   if ! load_config; then
-    log "error" "Failed to load configuration"
+    log "ERROR" "Failed to load configuration"
     exit 1
   fi
   
   # Step 3: Validate runtime environment
   if ! validate_runtime; then
-    log "error" "Runtime validation failed"
+    log "ERROR" "Runtime validation failed"
     exit 1
   fi
   
   # Step 4: Start monitoring service
-  log "info" "Starting monitoring service"
+  log "INFO" "Starting monitoring service"
   if ! start_monitoring; then
-    log "error" "Failed to start monitoring service"
+    log "ERROR" "Failed to start monitoring service"
     exit 1
   fi
   
@@ -320,7 +336,7 @@ main() {
   end_time=$(date +%s%N)
   local duration_ms=$(( (end_time - start_time) / 1000000 ))
   
-  log "info" "Startup completed in ${duration_ms}ms"
+  log "INFO" "Startup completed in ${duration_ms}ms"
   
   # Wait for signals
   wait

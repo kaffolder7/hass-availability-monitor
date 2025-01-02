@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
+# set -a  # Mark all variables and functions for export
 # shellcheck disable=SC1091
 # source "$(dirname "$0")/shell_constants.sh"
 # shellcheck disable=SC1091
+source "$(dirname "$0")/logging.sh"
+# shellcheck disable=SC1091
 source "$(dirname "$0")/config_validator.sh"
+# set +a  # Stop marking for export
 
 # Required for YAML parsing
 command -v yq >/dev/null 2>&1 || { echo "yq is required but not installed. Aborting."; exit 1; }
@@ -23,15 +27,15 @@ load_config() {
   # Validate each configuration file
   local files=("$base_config" "$env_config" "$notification_config")
   for config_file in "${files[@]}"; do
-    log "info" "Validating configuration file: $config_file"
+    log "INFO" "Validating configuration file: $config_file"
     if ! validate_config "$config_file" "$ENVIRONMENT"; then
-      log "error" "Configuration validation failed for $config_file"
+      log "ERROR" "Configuration validation failed for $config_file"
       exit 1
     fi
   done
 
   # Load and merge configurations
-  log "info" "Loading and merging configurations..."
+  log "INFO" "Loading and merging configurations..."
   local config
   config=$(yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1) * select(fileIndex == 2)' \
       "$base_config" "$env_config" "$notification_config")
@@ -47,7 +51,7 @@ load_config() {
     export "CONFIG_${key}=${value}"
   done < <(echo "$config" | yq e 'to_entries | .[] | select(.value != null) | .key + "=" + (.value | tostring)' -)
   
-  log "info" "Configuration loaded successfully"
+  log "INFO" "Configuration loaded successfully"
 }
 
 # validate_config() {
