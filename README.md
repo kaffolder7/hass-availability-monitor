@@ -74,7 +74,7 @@ A robust monitoring solution for Home Assistant API endpoints, providing compreh
    # Copy example configurations
    cp config/environments/production.yaml.example config/environments/production.yaml
    cp config/notifications/notification_config.yaml.example config/notifications/notification_config.yaml
-   cp .env.example .env  # or `.env.simple.example` (see below)
+   cp .env.example .env  # or `.env.full.example` (see below)
    
    # Edit configurations
    vim config/environments/production.yaml
