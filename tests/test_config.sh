@@ -158,62 +158,6 @@ generate_test_env() {
   fi
 }
 
-# Create a portable temporary file
-# (If `mktemp` is not used in `run_test()` function)
-# create_temp_file() {
-#   local prefix="${1:-test}"
-#   local temp_dir="${TMPDIR:-/tmp}"
-#   local timestamp
-#   timestamp=$(date +%Y%m%d_%H%M%S)
-#   local random_str
-#   random_str=$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n')
-#   local temp_file="${temp_dir}/${prefix}_${timestamp}_${random_str}"
-  
-#   # Create the file
-#   touch "$temp_file" 2>/dev/null || {
-#     echo "Error: Unable to create temporary file" >&2
-#     return 1
-#   }
-  
-#   # Ensure proper permissions
-#   chmod 600 "$temp_file" 2>/dev/null || {
-#     echo "Warning: Unable to set temporary file permissions" >&2
-#   }
-  
-#   echo "$temp_file"
-#   return 0
-
-#   # # Usage:
-#   # Create a temporary file
-#   # temp_file=$(create_temp_file "my_prefix") || exit 1
-
-#   # # Use the temporary file
-#   # echo "some content" > "$temp_file"
-
-#   # # File is automatically cleaned up when the script exits
-# }
-
-# Function to run a specific test
-# run_test() {
-#   local scenario=$1
-#   local env_file="$(mktemp)"
-  
-#   echo "Running test scenario: $scenario"
-#   generate_test_env "$scenario" "$env_file"
-  
-#   # Source the environment file
-#   source "$env_file"
-  
-#   # Run the actual test
-#   if ../check_endpoint.sh > "${scenario}.log" 2>&1; then
-#     echo "Test passed: $scenario"
-#     return 0
-#   else
-#     echo "Test failed: $scenario (see ${scenario}.log for details)"
-#     return 1
-#   fi
-# }
-
 # Run a specific test with cross-platform temp file handling
 run_test() {
   local scenario=$1
