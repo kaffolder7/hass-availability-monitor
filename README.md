@@ -88,10 +88,10 @@ A robust monitoring solution for Home Assistant API endpoints, providing compreh
    For a minimal setup with just the monitoring service:
    ```bash
    # Start the service
-   docker-compose -f compose.yaml up -d
+   docker-compose up -d
 
    # View logs
-   docker-compose -f compose.yaml logs -f
+   docker-compose logs -f
    ```
    <!-- _Note: If you are running the stripped down stack, then you will need to copy and use the simple example file: `cp .env.simple.example .env`_ -->
 
@@ -102,10 +102,10 @@ A robust monitoring solution for Home Assistant API endpoints, providing compreh
    mkdir -p prometheus grafana/provisioning
 
    # Start all services
-   docker-compose up -d
+   docker-compose -f compose.full.yaml up -d
 
    # View all logs
-   docker-compose logs -f
+   docker-compose -f compose.full.yaml logs -f
    ```
    _Note: If you would like to run the full stack, then you will need to copy and use the full `.env` example file: &nbsp;`cp .env.full.example .env`_
 
