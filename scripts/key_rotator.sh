@@ -15,8 +15,8 @@ initialize_key_rotator() {
 
 generate_api_key() {
   # Generate a secure random key
-  local key_length=32
-  local new_key=$(openssl rand -base64 $key_length | tr -d '/+=' | cut -c1-32)
+  local key_length=${KEY_ROTATION_LENGTH:-${DEFAULT_SECURITY_KEY_ROTATION_LENGTH:-32}}
+  local new_key=$(openssl rand -base64 $key_length | tr -d '/+=' | cut -c1-${key_length})
   echo "$new_key"
 }
 
