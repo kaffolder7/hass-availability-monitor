@@ -7,6 +7,7 @@
 source "$(dirname "$0")/utils.sh" || { echo "Failed to load utilities. Exiting."; exit 1; }
 source "$(dirname "$0")/config_loader.sh" || { echo "Failed to load configuration. Exiting."; exit 1; }
 source "$(dirname "$0")/runtime_validator.sh" || { echo "Failed to runtime configuration. Exiting."; exit 1; }
+source "$(dirname "$0")/logging.sh" || { echo "Failed to load logging. Exiting."; exit 1; }
 source "$(dirname "$0")/metrics.sh" || { echo "Failed to load metrics. Exiting."; exit 1; }
 source "$(dirname "$0")/status_server.sh" || { echo "Failed to load status server. Exiting."; exit 1; }
 source "$(dirname "$0")/api_monitor.sh" || { echo "Failed to load API monitoring logic. Exiting."; exit 1; }
@@ -34,7 +35,7 @@ initialize_app() {
   trap handle_error ERR
 
   # Initialize logging and rotate if needed
-  rotate_logs
+  initialize_logging
 
   # Initialize metrics
   initialize_metrics
