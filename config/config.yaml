@@ -44,7 +44,7 @@ default:
   status:
     server:
       port: 8080
-      success_code: 200
+      host: 0.0.0.0
 
   paths:
     log_dir: "/var/log/home_assistant_monitor"
