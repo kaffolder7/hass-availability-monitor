@@ -48,6 +48,8 @@ cleanup_cache() {
   
   # If still too many entries, remove oldest
   while [[ ${#REQUEST_CACHE[@]} -gt $cache_limit ]]; do
+  # request_cache_count=${#REQUEST_CACHE[@]}
+  # while [[ $request_cache_count -gt $cache_limit ]]; do
     local oldest_url
     local oldest_time=$now
     

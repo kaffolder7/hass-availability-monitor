@@ -35,6 +35,8 @@ validate_token() {
   
   # Check minimum token length
   if [[ ${#token} -lt 32 ]]; then
+  # token_length=${#token}
+  # if [[ $token_length -lt 32 ]]; then
     log "err" "Token too short, security risk"
     return 1
   fi
