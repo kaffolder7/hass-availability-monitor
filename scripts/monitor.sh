@@ -32,9 +32,12 @@ initialize_app() {
   # Set up signal handlers
   trap cleanup SIGTERM SIGINT SIGQUIT
   trap handle_error ERR
-  
+
+  # Initialize logging and rotate if needed
+  rotate_logs
+
   # Initialize metrics
-  # initialize_metrics
+  initialize_metrics
   
   local end_time
   end_time=$(date +%s%N)

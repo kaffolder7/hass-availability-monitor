@@ -6,12 +6,11 @@
 SCRIPT_DIR=$(dirname "$0")
 # shellcheck disable=SC2034
 ENV_FILE="$SCRIPT_DIR/.env"
+log_file="/var/log/home_assistant_monitor.log"
 
 # ==============================================
 # Logging Utilities
 # ==============================================
-log_file="/var/log/home_assistant_monitor.log"
-
 log() {
   local level="$1"
   local message="$2"
@@ -28,25 +27,24 @@ log() {
 
 rotate_logs() {
   local max_logs=7
+
+  # Only rotate if log file exists and is not empty
+  if [[ ! -f "$log_file" || ! -s "$log_file" ]]; then
+    log "warning" "Log file '$log_file' does not exist or is not set."
+    return 0
+  fi
+
   for ((i=max_logs; i>0; i--)); do
     if [[ -f "$log_file.$((i-1)).gz" ]]; then
       mv "$log_file.$((i-1)).gz" "$log_file.$i.gz"
     fi
   done
-  # if [[ -f "$log_file" ]]; then
-  #   gzip -c "$log_file" > "$log_file.1.gz"
-  #   > "$log_file"
-  #   log "info" "Logs rotated and compressed. Latest logs stored in $log_file.1.gz."
-  # fi
-  if [[ -n "$log_file" && -f "$log_file" ]]; then
-    if gzip -c "$log_file" > "$log_file.1.gz"; then
-      : > "$log_file" # Safely truncate the file
-      log "info" "Logs rotated and compressed. Latest logs stored in '$log_file.1.gz'."
-    else
-      log "error" "Failed to compress log file '$log_file'."
-    fi
+  
+  if gzip -c "$log_file" > "$log_file.1.gz"; then
+    : > "$log_file"
+    log "info" "Logs rotated and compressed. Latest logs stored in '$log_file.1.gz'."
   else
-    log "warning" "Log file '$log_file' does not exist or is not set."
+    log "error" "Failed to compress log file '$log_file'."
   fi
 }
 
@@ -196,8 +194,7 @@ start_resource_monitoring() {
   done &
 }
 
+
+
 # Trap signals for graceful shutdown
 # trap 'log "info" "Script interrupted. Cleaning up..."; kill $(jobs -p) 2>/dev/null; exit 1' SIGINT SIGTERM
-
-# Initialize log rotation setup
-rotate_logs
