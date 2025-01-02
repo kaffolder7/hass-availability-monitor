@@ -8,8 +8,7 @@ source "$(dirname "$0")/config_loader.sh" || { echo "Failed to load configuratio
 source "$(dirname "$0")/utils.sh" || { echo "Failed to load utilities. Exiting."; exit 1; }
 source "$(dirname "$0")/metrics.sh" || { echo "Failed to load metrics. Exiting."; exit 1; }
 source "$(dirname "$0")/status_server.sh" || { echo "Failed to load status server. Exiting."; exit 1; }
-# source "$(dirname "$0")/api_monitor.sh" || { echo "Failed to load API monitoring logic. Exiting."; exit 1; }
-source "$(dirname "$0")/improved_api_monitor.sh" || { echo "Failed to load API monitoring logic. Exiting."; exit 1; }
+source "$(dirname "$0")/api_monitor.sh" || { echo "Failed to load API monitoring logic. Exiting."; exit 1; }
 source "$(dirname "$0")/notifications.sh" || { echo "Failed to load notifications logic. Exiting."; exit 1; }
 
 cleanup() {
