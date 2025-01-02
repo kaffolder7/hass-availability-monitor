@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# status_server.sh - Implements a basic HTTP server that provides web-based status endpoints (/metrics, /status, /health) to display monitoring metrics, system health, and resource usage through an HTML dashboard.
+
 # shellcheck disable=SC1091
 source "$(dirname "$0")/utils.sh"
 # shellcheck disable=SC1091

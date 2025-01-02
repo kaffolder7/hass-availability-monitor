@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# run_tests.sh - Orchestrates the test suite execution by starting a mock API server, running test scenarios defined in test_configs.sh, and providing a summary of test results.
+
 # set -e  # Exit immediately if a command exits with a non-zero status
 
 # Import test configurations

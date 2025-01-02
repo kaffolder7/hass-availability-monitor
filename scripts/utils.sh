@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# utils.sh
-# Utility functions for the Home Assistant Monitor project.
+# monitor.sh - Provides shared utility functions for notification throttling, resource monitoring, error handling, and temporary file management that are used across different components of the monitoring system.
 
 # set -a  # Mark all variables and functions for export
 # shellcheck disable=SC1091

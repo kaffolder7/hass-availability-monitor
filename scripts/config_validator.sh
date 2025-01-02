@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Configuration Validation Module (config_validator.sh)
+# config_loader.sh - Defines and enforces validation rules for various configuration types (strings, integers, URLs, etc.) and validates both shared and environment-specific configuration values to ensure they meet required constraints.
 
 # set -a  # Mark all variables and functions for export
 # shellcheck disable=SC1091

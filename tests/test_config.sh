@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# tests/test_configs.sh
+# tests/test_configs.sh - Defines test scenarios with different configurations (base configs and specific test cases) and provides functions to generate, run, and validate these test cases for the monitoring system.
 
-# shellcheck disable=SC1091
 # set -a  # Mark all variables and functions for export
+# shellcheck disable=SC1091
 source "$(dirname "$0")/../scripts/utils.sh"
 # set +a  # Stop marking for export
 

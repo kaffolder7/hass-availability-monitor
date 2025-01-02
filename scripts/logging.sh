@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# logging.sh - Enhanced logging functionality
+# logging.sh - Provides a centralized logging system with configurable log levels, file and syslog output, log rotation integration, and cross-platform support for consistent application logging.
 
 set -a  # Mark all variables and functions for export
 # shellcheck disable=SC1091

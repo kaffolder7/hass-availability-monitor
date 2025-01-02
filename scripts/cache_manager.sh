@@ -1,5 +1,5 @@
-#!/bin/bash
-# Cache implementation with LRU (Least Recently Used) eviction
+#!/usr/bin/env bash
+# cache_manager.sh - Cache implementation with LRU (Least Recently Used) caching system to store and manage API response data with configurable size limits, TTL, and eviction policies to optimize performance and reduce API load.
 
 # Cache configuration
 declare -A CACHE_DATA       # Stores actual cache entries

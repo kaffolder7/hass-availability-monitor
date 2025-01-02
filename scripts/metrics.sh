@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# metrics.sh - Collects, stores, and reports various monitoring metrics (response times, uptime, failures, etc.) with support for trend analysis, Prometheus export, and automated rotation of historical data.
 
 # Initialize metrics storage
 declare -A METRICS=(

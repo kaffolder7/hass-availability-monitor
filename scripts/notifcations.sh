@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Handles all notification methods.
+# notifications.sh - Handles sending notifications across multiple channels (SMS, email, Slack, Teams, Discord, Telegram, PagerDuty) with retry logic, rate limiting, and batching capabilities when monitoring events occur.
 
 send_notification() {
   local platform="$1"

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1091
-# Main script handling the monitoring loop.
+# monitor.sh - Serves as the main entry point that initializes and orchestrates all monitoring components (logging, API checks, metrics, notifications) and manages the lifecycle of the monitoring service.
 
 # Load dependencies
+# shellcheck disable=SC1091
 # source "$(dirname "$0")/shell_constants.sh" || { echo "Failed to load constants. Exiting."; exit 1; }
 source "$(dirname "$0")/utils.sh" || { echo "Failed to load utilities. Exiting."; exit 1; }
 source "$(dirname "$0")/logging.sh" || { echo "Failed to load logging. Exiting."; exit 1; }

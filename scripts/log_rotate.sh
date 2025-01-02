@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# log_rotate.sh - Log rotation functionality
+# log_rotate.sh - Log rotation functionality which manages log file rotation by compressing and archiving old log files when they reach a certain size, maintaining a specified number of historical log files to prevent disk space issues.
 
 rotate_logs() {
   local log_file="$1"

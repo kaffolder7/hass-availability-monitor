@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# config_loader.sh - Loads and validates YAML configuration files (base config, environment-specific config, and notification config), merges them in the correct order, and exports them as environment variables for use throughout the application.
+
 # set -a  # Mark all variables and functions for export
 # shellcheck disable=SC1091
 # source "$(dirname "$0")/shell_constants.sh"

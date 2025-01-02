@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# api_monitor.sh - Checks the health of Home Assistant API endpoints through configurable HTTP requests with retry logic, caching, and metrics collection, triggering notifications when issues are detected.
 
 # shellcheck disable=SC1091
 source "$(dirname "$0")/security.sh"

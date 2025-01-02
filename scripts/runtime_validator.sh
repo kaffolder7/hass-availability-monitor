@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-
-# Runtime Configuration Validator (runtime_validator.sh)
-# This module validates runtime configuration after environment variables are loaded
+# runtime_validator.sh - Validates runtime environment configuration and required system services/dependencies before the monitoring service starts, ensuring all necessary components are properly configured and available.
 
 # Import required modules
 # shellcheck disable=SC1091

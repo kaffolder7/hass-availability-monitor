@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# security.sh - Functions to enforce security policies by validating URLs and authentication tokens, and configure secure CURL options with appropriate TLS settings and cipher requirements.
 
 validate_url() {
   local url=$1
