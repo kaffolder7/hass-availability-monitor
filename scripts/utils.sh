@@ -89,54 +89,54 @@ handle_error() {
 # ==============================================
 # Environment Utilities
 # ==============================================
-load_env_file() {
-  # local env_file="$1"
-  local env_file="${1:-ENV_FILE}"
-  if [[ ! -f "$env_file" ]]; then
-    log "err" ".env file not found at $env_file! Exiting."
-    exit 1
-  fi
+# load_env_file() {
+#   # local env_file="$1"
+#   local env_file="${1:-ENV_FILE}"
+#   if [[ ! -f "$env_file" ]]; then
+#     log "err" ".env file not found at $env_file! Exiting."
+#     exit 1
+#   fi
 
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    # Trim whitespace and skip comments or empty lines
-    line=$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-    [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+#   while IFS= read -r line || [[ -n "$line" ]]; do
+#     # Trim whitespace and skip comments or empty lines
+#     line=$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+#     [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
 
-    # Parse key-value pairs and export
-    if [[ "$line" =~ ^[a-zA-Z_][a-zA-Z0-9_]*=.*$ ]]; then
-      key=$(echo "$line" | cut -d '=' -f 1)
-      value=$(echo "$line" | cut -d '=' -f 2-)
-      export "$key"="$(eval echo "$value")"
-    else
-      log "err" "Malformed line in .env: $line"
-    fi
-  done < "$env_file"
-}
+#     # Parse key-value pairs and export
+#     if [[ "$line" =~ ^[a-zA-Z_][a-zA-Z0-9_]*=.*$ ]]; then
+#       key=$(echo "$line" | cut -d '=' -f 1)
+#       value=$(echo "$line" | cut -d '=' -f 2-)
+#       export "$key"="$(eval echo "$value")"
+#     else
+#       log "err" "Malformed line in .env: $line"
+#     fi
+#   done < "$env_file"
+# }
 
-validate_env_vars() {
-  # Validate required variables
-  local required_vars=("HASS_API_URL" "HASS_AUTH_TOKEN")
-  for var in "${required_vars[@]}"; do
-    if [[ -z "${!var}" ]]; then
-      log "err" "Required environment variable $var is missing."
-      exit 1
-    fi
-  done
+# validate_env_vars() {
+#   # Validate required variables
+#   local required_vars=("HASS_API_URL" "HASS_AUTH_TOKEN")
+#   for var in "${required_vars[@]}"; do
+#     if [[ -z "${!var}" ]]; then
+#       log "err" "Required environment variable $var is missing."
+#       exit 1
+#     fi
+#   done
 
-  # Validate optional variables
-  [[ "$NOTIFICATIONS_SMS_METHOD" == "forwardemail" && ( -n "$SMS_TO" || -n "$NOTIFICATIONS_SMS_FROM" || -n "$NOTIFICATIONS_SMS_SETTINGS_FORWARDEMAIL_AUTH_TOKEN" ) ]] || log "info" "Email-to-SMS notifications are disabled."
-  [[ "$NOTIFICATIONS_SMS_METHOD" == "twilio" && ( -n "$SMS_TO" || -n "$NOTIFICATIONS_SMS_SETTINGS_TWILIO_ACCOUNT_SID" || -n "$NOTIFICATIONS_SMS_SETTINGS_TWILIO_AUTH_TOKEN" || -n "$NOTIFICATIONS_SMS_FROM" ) ]] || log "info" "Twilio SMS notifications are disabled."
-  [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "smtp" && ( -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_HOST" || -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PORT" || -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PASSWORD" || -n "$NOTIFICATIONS_EMAIL_FROM" || -n "$NOTIFICATIONS_EMAIL_SUBJECT" ) ]] || log "info" "SMTP email notifications are disabled."
-  [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "sendgrid" && ( -n "$NOTIFICATIONS_EMAIL_SETTINGS_SENDGRID_API_KEY" || -n "$NOTIFICATIONS_EMAIL_MAIL_FROM" || -n "$NOTIFICATIONS_EMAIL_SUBJECT" ) ]] || log "info" "Sendgrid email notifications are disabled."
-  [[ -n "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL" ]] || log "info" "Slack notifications are disabled."
-  [[ -n "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL" ]] || log "info" "Teams notifications are disabled."
-  [[ -n "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL" ]] || log "info" "Discord notifications are disabled."
-  [[ -n "$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID" || -n "$NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN" ]] || log "info" "Telegram notifications are disabled."
-  [[ -n "$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY" ]] || log "info" "PagerDuty notifications are disabled."
+#   # Validate optional variables
+#   [[ "$NOTIFICATIONS_SMS_METHOD" == "forwardemail" && ( -n "$SMS_TO" || -n "$NOTIFICATIONS_SMS_FROM" || -n "$NOTIFICATIONS_SMS_SETTINGS_FORWARDEMAIL_AUTH_TOKEN" ) ]] || log "info" "Email-to-SMS notifications are disabled."
+#   [[ "$NOTIFICATIONS_SMS_METHOD" == "twilio" && ( -n "$SMS_TO" || -n "$NOTIFICATIONS_SMS_SETTINGS_TWILIO_ACCOUNT_SID" || -n "$NOTIFICATIONS_SMS_SETTINGS_TWILIO_AUTH_TOKEN" || -n "$NOTIFICATIONS_SMS_FROM" ) ]] || log "info" "Twilio SMS notifications are disabled."
+#   [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "smtp" && ( -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_HOST" || -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PORT" || -n "$NOTIFICATIONS_EMAIL_SETTINGS_SMTP_PASSWORD" || -n "$NOTIFICATIONS_EMAIL_FROM" || -n "$NOTIFICATIONS_EMAIL_SUBJECT" ) ]] || log "info" "SMTP email notifications are disabled."
+#   [[ "$NOTIFICATIONS_EMAIL_DRIVER" == "sendgrid" && ( -n "$NOTIFICATIONS_EMAIL_SETTINGS_SENDGRID_API_KEY" || -n "$NOTIFICATIONS_EMAIL_MAIL_FROM" || -n "$NOTIFICATIONS_EMAIL_SUBJECT" ) ]] || log "info" "Sendgrid email notifications are disabled."
+#   [[ -n "$NOTIFICATIONS_SERVICES_SLACK_WEBHOOK_URL" ]] || log "info" "Slack notifications are disabled."
+#   [[ -n "$NOTIFICATIONS_SERVICES_TEAMS_WEBHOOK_URL" ]] || log "info" "Teams notifications are disabled."
+#   [[ -n "$NOTIFICATIONS_SERVICES_DISCORD_WEBHOOK_URL" ]] || log "info" "Discord notifications are disabled."
+#   [[ -n "$NOTIFICATIONS_SERVICES_TELEGRAM_CHAT_ID" || -n "$NOTIFICATIONS_SERVICES_TELEGRAM_BOT_API_TOKEN" ]] || log "info" "Telegram notifications are disabled."
+#   [[ -n "$NOTIFICATIONS_SERVICES_PAGERDUTY_ROUTING_KEY" ]] || log "info" "PagerDuty notifications are disabled."
 
-  # Warn about unset optional variables
-  [[ -n "${CONTINUOUS_FAILURE_INTERVAL:-${DEFAULT_MONITORING_CONTINUOUS_FAILURE_INTERVAL:-1800}}" ]] || log "warn" "CONTINUOUS_FAILURE_INTERVAL is not set. Defaulting to 1800 seconds."
-}
+#   # Warn about unset optional variables
+#   [[ -n "${CONTINUOUS_FAILURE_INTERVAL:-${DEFAULT_MONITORING_CONTINUOUS_FAILURE_INTERVAL:-1800}}" ]] || log "warn" "CONTINUOUS_FAILURE_INTERVAL is not set. Defaulting to 1800 seconds."
+# }
 
 # ==============================================
 # Notification Helpers
