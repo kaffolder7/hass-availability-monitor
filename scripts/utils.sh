@@ -173,13 +173,13 @@ create_temp_file() {
   
   # Create the file
   touch "$temp_file" 2>/dev/null || {
-    echo "Error: Unable to create temporary file" >&2
+    log "ERROR" "Unable to create temporary file"
     return 1
   }
   
   # Ensure proper permissions
   chmod 600 "$temp_file" 2>/dev/null || {
-    echo "Warning: Unable to set temporary file permissions" >&2
+    log "WARN" "Unable to set temporary file permissions"
   }
   
   echo "$temp_file"
