@@ -31,7 +31,7 @@ initialize_metrics() {
 }
 
 rotate_metrics() {
-  local retention_days=${METRICS_RETENTION_DAYS:-30}
+  local retention_days=${METRICS_RETENTION_DAYS:-${DEFAULT_METRICS_RETENTION_DAYS:-30}}
   local max_age=$((retention_days * 86400))
   local current_time
   current_time=$(date +%s)
