@@ -8,47 +8,9 @@ source "$(dirname "$0")/logging.sh"
 # set +a  # Stop marking for export
 
 # Constants and Default Values
-SCRIPT_DIR=$(dirname "$0")
+# SCRIPT_DIR=$(dirname "$0")
 # shellcheck disable=SC2034
-ENV_FILE="$SCRIPT_DIR/.env"
-
-handle_error() {
-  # 
-  # Usage example:
-  # if ! some_function; then
-  #     handle_error "Failed to execute some_function" 2
-  # fi
-  # 
-  local error_message="$1"
-  local error_code="${2:-1}"
-  local stack_trace=""
-  local i=0
-  
-  # Capture stack trace
-  while caller $i >/dev/null 2>&1; do
-    local frame
-    frame=$(caller $i)
-    stack_trace+="  at ${frame}\n"
-    ((i++))
-  done
-  
-  # Log error with context
-  log "err" "$error_message"
-  log "debug" "Stack trace:\n$stack_trace"
-  
-  # Update metrics
-  METRICS["last_error"]="$error_message"
-  METRICS["last_error_time"]=$(date +%s)
-  METRICS["error_count"]=$((METRICS["error_count"] + 1))
-
-  # Send alert if error threshold exceeded
-  if [[ ${METRICS["error_count"]} -gt ${ERROR_THRESHOLD:-10} ]]; then
-    send_notifications_async "Error threshold exceeded: $error_message"
-  fi
-  
-  save_metrics
-  return "$error_code"
-}
+# ENV_FILE="$SCRIPT_DIR/.env"
 
 # ==============================================
 # Environment Utilities
@@ -106,7 +68,8 @@ handle_error() {
 # Notification Helpers
 # ==============================================
 throttle_notifications() {
-  local last_sent_file="/tmp/notification_last_sent"  local now
+  local last_sent_file="/tmp/notification_last_sent"
+  local now
   now=$(date +%s)
   local failure_interval=${CONTINUOUS_FAILURE_INTERVAL:-${DEFAULT_MONITORING_CONTINUOUS_FAILURE_INTERVAL:-1800}}
 
@@ -122,14 +85,16 @@ throttle_notifications() {
 
   # Update the timestamp file
   echo "$now" > "$last_sent_file.tmp" && mv "$last_sent_file.tmp" "$last_sent_file"
-  return 0}
+  return 0
+}
 
 # ==============================================
 # Resource Monitoring Utilities
 # ==============================================
 monitor_resources() {
   local cpu_usage
-  local mem_usage  local disk_usage
+  local mem_usage
+  local disk_usage
   cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
   mem_usage=$(free | grep Mem | awk '{print ($3/$2) * 100.0}')
   disk_usage=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
@@ -158,6 +123,44 @@ start_resource_monitoring() {
 # ==============================================
 # Other Utilities
 # ==============================================
+handle_error() {
+  # 
+  # Usage example:
+  # if ! some_function; then
+  #     handle_error "Failed to execute some_function" 2
+  # fi
+  # 
+  local error_message="$1"
+  local error_code="${2:-1}"
+  local stack_trace=""
+  local i=0
+  
+  # Capture stack trace
+  while caller $i >/dev/null 2>&1; do
+    local frame
+    frame=$(caller $i)
+    stack_trace+="  at ${frame}\n"
+    ((i++))
+  done
+  
+  # Log error with context
+  log "ERROR" "$error_message"
+  log "DEBUG" "Stack trace:\n$stack_trace"
+  
+  # Update metrics
+  METRICS["last_error"]="$error_message"
+  METRICS["last_error_time"]=$(date +%s)
+  METRICS["error_count"]=$((METRICS["error_count"] + 1))
+
+  # Send alert if error threshold exceeded
+  if [[ ${METRICS["error_count"]} -gt ${ERROR_THRESHOLD:-10} ]]; then
+    send_notifications_async "Error threshold exceeded: $error_message"
+  fi
+  
+  save_metrics
+  return "$error_code"
+}
+
 # Create a portable, cross-platform temporary file
 create_temp_file() {
   local prefix="${1:-test}"
