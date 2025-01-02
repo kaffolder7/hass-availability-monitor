@@ -1,4 +1,4 @@
-# config/notifications/notification_config.yaml
+# config/notifications/notification_config.yaml.example
 notifications:
   sms:
     enabled: true

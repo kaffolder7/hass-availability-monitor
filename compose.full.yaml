@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDTIME_ENV=${ENVIRONMENT:-production}
+    image: hass-monitor:latest
+    container_name: hass-monitor
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+
+      # API Configuration
+      - HASS_API_URL=${HASS_API_URL}
+      - HASS_AUTH_TOKEN=${HASS_AUTH_TOKEN}
+
+      # Monitoring Settings
+      - MONITORING_CHECK_INTERVAL=${MONITORING_CHECK_INTERVAL:-60}
+      - MONITORING_HEALTH_CHECK_INTERVAL=${MONITORING_HEALTH_CHECK_INTERVAL:-300}
+      - MONITORING_RETRY_COUNT=${MONITORING_RETRY_COUNT:-3}
+      - MONITORING_RETRY_INTERVAL=${MONITORING_RETRY_INTERVAL:-10}
+      - MONITORING_MAX_CONCURRENT_JOBS=${MONITORING_MAX_CONCURRENT_JOBS:-4}
+
+      # Notification Settings
+      - NOTIFICATIONS_ENABLED=${NOTIFICATIONS_ENABLED:-true}
+      - NOTIFICATIONS_RATELIMIT_WINDOW=${NOTIFICATIONS_RATELIMIT_WINDOW:-300}
+      - NOTIFICATIONS_MAX_COUNT=${NOTIFICATIONS_MAX_COUNT:-3}
+
+      # SMS (Twilio) Configuration
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_FROM=${TWILIO_FROM}
+
+      # Email Configuration
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM}
+
+      # Integration Services
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - PAGERDUTY_ROUTING_KEY=${PAGERDUTY_ROUTING_KEY}
+
+      # Cache Settings
+      - CACHE_ENABLED=${CACHE_ENABLED:-true}
+      - CACHE_TTL=${CACHE_TTL:-30}
+      - CACHE_SIZE_LIMIT=${CACHE_SIZE_LIMIT:-1000}
+
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ./config:/app/config:ro
+      - monitor_logs:/var/log/home_assistant_monitor
+      - monitor_metrics:/var/lib/home_assistant_monitor/metrics
+      - monitor_temp:/tmp/home_assistant_monitor
+    ports:
+      - "${STATUS_SERVER_PORT:-8080}:8080"
+    networks:
+      - hass-monitor-net
+    healthcheck:
+      test: ["CMD", "/app/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hass-monitor-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - hass-monitor-net
+    depends_on:
+      - monitor
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hass-monitor-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    networks:
+      - hass-monitor-net
+    depends_on:
+      - prometheus
+
+networks:
+  hass-monitor-net:
+    driver: bridge
+
+volumes:
+  monitor_logs:
+    driver: local
+  monitor_metrics:
+    driver: local
+  monitor_temp:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

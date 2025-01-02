@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hass-monitor
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - HASS_API_URL=${HASS_API_URL}
+      - HASS_AUTH_TOKEN=${HASS_AUTH_TOKEN}
+    volumes:
+      - ./config:/app/config:ro
+      - monitor_logs:/var/log/home_assistant_monitor
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "/app/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  monitor_logs:
+    driver: local

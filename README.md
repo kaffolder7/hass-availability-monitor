@@ -74,13 +74,43 @@ A robust monitoring solution for Home Assistant API endpoints, providing compreh
    # Copy example configurations
    cp config/environments/production.yaml.example config/environments/production.yaml
    cp config/notifications/notification_config.yaml.example config/notifications/notification_config.yaml
+   cp .env.example .env  # or `.env.simple.example` (see below)
    
    # Edit configurations
    vim config/environments/production.yaml
    vim config/notifications/notification_config.yaml
+   vim .env
    ```
 
-3. **Build and Run with Docker**
+3. **Choose Deployment Method**
+
+   ### Option 1: Basic Docker Compose Deployment
+   For a minimal setup with just the monitoring service:
+   ```bash
+   # Start the service
+   docker-compose -f compose.yaml up -d
+
+   # View logs
+   docker-compose -f compose.yaml logs -f
+   ```
+   <!-- _Note: If you are running the stripped down stack, then you will need to copy and use the simple example file: `cp .env.simple.example .env`_ -->
+
+   ### Option 2: Full Stack Deployment
+   For a complete setup including Prometheus and Grafana:
+   ```bash
+   # Create required directories
+   mkdir -p prometheus grafana/provisioning
+
+   # Start all services
+   docker-compose up -d
+
+   # View all logs
+   docker-compose logs -f
+   ```
+   _Note: If you would like to run the full stack, then you will need to copy and use the full `.env` example file: &nbsp;`cp .env.full.example .env`_
+
+   ### Option 3: Manual Docker Deployment
+   If you prefer to run without Docker Compose:
    ```bash
    docker build -t hass-monitor .
    docker run -d \
@@ -90,10 +120,15 @@ A robust monitoring solution for Home Assistant API endpoints, providing compreh
      hass-monitor
    ```
 
-4. **Access the Dashboard**
-   ```bash
-   curl http://localhost:8080/status
-   ```
+4. **Access the Services**
+
+   Basic Deployment:
+   - Monitor Dashboard: http://localhost:8080
+
+   Full Stack Deployment:
+   - Monitor Dashboard: http://localhost:8080
+   - Prometheus: http://localhost:9090
+   - Grafana: http://localhost:3000
 
 ## Configuration
 
@@ -175,6 +210,67 @@ tail -f /var/log/home_assistant_monitor/monitor.log
 ./scripts/utils.sh rotate_logs
 ```
 
+## Docker Compose Configurations
+
+The project includes two Docker Compose configurations for different deployment scenarios:
+
+### Minimal Configuration (`compose.yaml`)
+- Core monitoring service only
+- Basic environment variables
+- Log persistence
+- Health checks
+- Status dashboard
+
+Example minimal deployment:
+```bash
+# Start service
+docker-compose -f compose.yaml up -d
+
+# Check logs
+docker-compose -f compose.yaml logs -f
+
+# Stop service
+docker-compose -f compose.yaml down
+```
+
+### Full Stack Configuration (`compose.full.yaml`)
+- Complete monitoring solution
+- Prometheus metrics integration
+- Grafana dashboards
+- Advanced configuration options
+- Volume management
+- Resource limits
+- Log rotation
+
+Example full stack deployment:
+```bash
+# Start all services
+docker-compose up -d
+
+# Scale monitoring if needed
+docker-compose up -d --scale monitor=2
+
+# View specific service logs
+docker-compose logs -f monitor
+docker-compose logs -f prometheus
+docker-compose logs -f grafana
+
+# Stop all services
+docker-compose down
+```
+
+### Environment Variables
+Both configurations use environment variables for configuration:
+
+Minimal Required Variables:
+```bash
+ENVIRONMENT=production
+HASS_API_URL=https://your-homeassistant.example.com/api
+HASS_AUTH_TOKEN=your_long_lived_access_token
+```
+
+See `.env.example` for all available configuration options.
+
 ## Development
 
 ### Running Tests
@@ -202,7 +298,7 @@ tail -f /var/log/home_assistant_monitor/monitor.log
 
 ### Common Issues
 - Check logs in `/var/log/home_assistant_monitor/`
-- Verify configurations in `/app/config/`
+- Verify necessary configuration files exist in `/app/config/`
 - Ensure proper permissions for log/metric directories
 
 ### Debug Mode
