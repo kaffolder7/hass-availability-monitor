@@ -2,7 +2,9 @@
 # tests/test_configs.sh
 
 # shellcheck disable=SC1091
+# set -a  # Mark all variables and functions for export
 source "$(dirname "$0")/../scripts/utils.sh"
+# set +a  # Stop marking for export
 
 # Base configuration that all tests inherit from
 declare -A BASE_CONFIG=(
