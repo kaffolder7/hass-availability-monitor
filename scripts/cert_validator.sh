@@ -2,7 +2,7 @@
 # cert_validator.sh - 
 
 # Directory for storing certificate fingerprints
-CERT_DIR="${PATHS_CERT_DIR:-/etc/home_assistant_monitor/certs}"
+CERT_DIR="${PATHS_CERT_DIR:-${DEFAULT_SECURITY_PATHS_CERT_DIR:-/etc/home_assistant_monitor/certs}}"
 PINNED_CERTS_FILE="$CERT_DIR/pinned_certs.json"
 
 initialize_cert_validator() {
