@@ -43,6 +43,15 @@ initialize_app() {
 
   # Initialize metrics
   initialize_metrics
+
+  # Initialize security
+  initialize_security
+
+  # Pin certificates for all configured endpoints
+  for endpoint in "${API_ENDPOINTS[@]}"; do
+    url=$(echo "$endpoint" | yq e '.url' -)
+    pin_certificate "$url"
+  done
   
   local end_time
   end_time=$(date +%s%N)

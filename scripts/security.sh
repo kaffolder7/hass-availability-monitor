@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # security.sh - Functions to enforce security policies by validating URLs and authentication tokens, and configure secure CURL options with appropriate TLS settings and cipher requirements.
 
+# shellcheck disable=SC1091
+source "$(dirname "$0")/cert_validator.sh"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/key_rotator.sh"
+
 validate_url() {
   local url=$1
   
@@ -68,4 +73,24 @@ setup_secure_curl() {
 
   # Usage:
   # curl "${CURL_SECURE_OPTIONS[@]}" "https://some-url.com"
+}
+
+initialize_security() {
+  initialize_cert_validator
+  initialize_key_rotator
+}
+
+validate_endpoint_security() {
+  local url="$1"
+  
+  # Skip certificate validation for non-HTTPS URLs
+  if [[ "$url" =~ ^https:// ]]; then
+    if ! verify_certificate "$url"; then
+      log "ERROR" "Certificate verification failed for $url"
+      send_notifications_async "Security Alert: Certificate verification failed for $url"
+      return 1
+    fi
+  fi
+  
+  return 0
 }

@@ -26,6 +26,16 @@ default:
     required_ciphers: "HIGH:!aNULL:!MD5:!RC4"
     api_timeout: 10
     api_max_redirects: 5
+    cert_pinning:
+      enabled: true
+      verify_interval: 3600  # Check certificates hourly
+    key_rotation:
+      enabled: true
+      interval: 604800  # Rotate keys weekly
+      length: 32  # Key length in bytes
+    paths:
+      cert_dir: "/etc/home_assistant_monitor/certs"
+      key_dir: "/etc/home_assistant_monitor/keys"
 
   metrics:
     retention_days: 30

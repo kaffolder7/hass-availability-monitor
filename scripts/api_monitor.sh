@@ -11,6 +11,57 @@ source "$(dirname "$0")/cache_manager.sh"
 # Initialize cache with configuration from config.yaml
 init_cache "${CACHE_SIZE_LIMIT:-${DEFAULT_CACHE_SIZE_LIMIT:-1000}}" "${CACHE_TTL:-${DEFAULT_CACHE_TTL:-30}}" "${CACHE_ENABLED:-${DEFAULT_CACHE_ENABLED:-true}}"
 
+check_api_with_backoff() {
+  local url="$1"
+  local retry_count=${RETRY_COUNT:-${DEFAULT_MONITORING_RETRY_COUNT:-3}}
+  local attempt=1
+
+  # Validate security before making requests
+  if ! validate_endpoint_security "$url"; then
+    return 1
+  }
+
+  # Try to get from cache first
+  if response=$(cache_get "$url"); then
+    log "INFO" "[CACHE] Using cached response for $url"
+    return 0
+  fi
+  
+  while (( attempt <= retry_count )); do
+    local response_code
+    response_code=$(curl "${CURL_SECURE_OPTIONS[@]}" \
+      -H "Authorization: Bearer $HASS_AUTH_TOKEN" \
+      --write-out "%{http_code}" \
+      --silent --output /dev/null \
+      "$url")
+        
+    if [[ "$response_code" -eq ${MONITORING_SUCCESS_CODE:-${DEFAULT_MONITORING_SUCCESS_CODE:-200}} ]]; then
+      log "INFO" "API request to $url succeeded on attempt $attempt."
+      
+      # Cache successful response
+      cache_set "$url" "$response_code"
+
+      return 0
+    else
+      log "ERROR" "API request to $url failed with response code $response_code on attempt $attempt."
+      
+      # Remove failed response from cache if it exists
+      cache_remove "$url"
+      
+      if (( attempt < retry_count )); then
+        local sleep_time
+        sleep_time=$(exponential_backoff "$attempt" "${RETRY_INTERVAL:-${DEFAULT_MONITORING_RETRY_INTERVAL:-60}}")
+        log "INFO" "Retrying $url in $sleep_time seconds..."
+        sleep "$sleep_time"
+      fi
+    fi
+    ((attempt++))
+  done
+  
+  log "ERROR" "API request to $url failed after $retry_count attempts."
+  return 1
+}
+
 check_endpoints_async() {
   local endpoints=("$@")
   local max_jobs=${MAX_CONCURRENT_JOBS:-${DEFAULT_MONITORING_MAX_CONCURRENT_JOBS:-4}}
@@ -84,50 +135,4 @@ check_endpoints_async() {
   done
   
   return $failed
-}
-
-check_api_with_backoff() {
-  local url="$1"
-  local retry_count=${RETRY_COUNT:-${DEFAULT_MONITORING_RETRY_COUNT:-3}}
-  local attempt=1
-
-  # Try to get from cache first
-  if response=$(cache_get "$url"); then
-    log "INFO" "[CACHE] Using cached response for $url"
-    return 0
-  fi
-  
-  while (( attempt <= retry_count )); do
-    local response_code
-    response_code=$(curl "${CURL_SECURE_OPTIONS[@]}" \
-      -H "Authorization: Bearer $HASS_AUTH_TOKEN" \
-      --write-out "%{http_code}" \
-      --silent --output /dev/null \
-      "$url")
-        
-    if [[ "$response_code" -eq ${MONITORING_SUCCESS_CODE:-${DEFAULT_MONITORING_SUCCESS_CODE:-200}} ]]; then
-      log "INFO" "API request to $url succeeded on attempt $attempt."
-      
-      # Cache successful response
-      cache_set "$url" "$response_code"
-
-      return 0
-    else
-      log "ERROR" "API request to $url failed with response code $response_code on attempt $attempt."
-      
-      # Remove failed response from cache if it exists
-      cache_remove "$url"
-      
-      if (( attempt < retry_count )); then
-        local sleep_time
-        sleep_time=$(exponential_backoff "$attempt" "${RETRY_INTERVAL:-${DEFAULT_MONITORING_RETRY_INTERVAL:-60}}")
-        log "INFO" "Retrying $url in $sleep_time seconds..."
-        sleep "$sleep_time"
-      fi
-    fi
-    ((attempt++))
-  done
-  
-  log "ERROR" "API request to $url failed after $retry_count attempts."
-  return 1
 }
