@@ -9,7 +9,7 @@ WORKDIR /build
 
 # Copy and set permissions for scripts and configs
 COPY --chmod=755 scripts/ ./scripts/
-COPY --chmod=600 configs/.env ./configs/.env
+COPY --chmod=600 config/ ./config/
 
 # Runtime Stage
 FROM alpine:3.21
@@ -34,8 +34,8 @@ RUN apk add --no-cache \
     && chown -R monitor:monitor /var/log/supervisor
 
 # Install `yq` for YAML processing (of project config files) ...needs to be its own separate layer before `curl` is installed in last layer
-RUN curl -Lo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
-    chmod +x /usr/local/bin/yq
+RUN curl -Lo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_amd64" \
+    && chmod +x /usr/local/bin/yq
 
 # Create and set permissions for required directories BEFORE switching user
 RUN mkdir -p \
@@ -49,7 +49,7 @@ RUN mkdir -p \
 
 # Copy files from builder
 COPY --from=builder --chown=monitor:monitor /build/scripts/ ./scripts/
-COPY --from=builder --chown=monitor:monitor /build/configs/.env ./configs/.env
+COPY --from=builder --chown=monitor:monitor /build/config/ ./config/
 COPY --chown=monitor:monitor supervisord.conf /etc/supervisord.conf
 
 # Switch to non-root user
