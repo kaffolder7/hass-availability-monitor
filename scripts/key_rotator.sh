@@ -2,9 +2,9 @@
 # key_rotator.sh - 
 
 # Directory for storing API keys
-KEY_DIR="${PATHS_KEY_DIR:-/etc/home_assistant_monitor/keys}"
+KEY_DIR="${PATHS_KEY_DIR:-${DEFAULT_SECURITY_PATHS_KEY_DIR:-/etc/home_assistant_monitor/keys}}"
 KEYS_FILE="$KEY_DIR/api_keys.json"
-KEY_ROTATION_INTERVAL=${SECURITY_KEY_ROTATION_INTERVAL:-604800} # 7 days
+KEY_ROTATION_INTERVAL=${SECURITY_KEY_ROTATION_INTERVAL:-${DEFAULT_SECURITY_KEY_ROTATION_INTERVAL:-604800}} # 7 days
 
 initialize_key_rotator() {
   mkdir -p "$KEY_DIR"
