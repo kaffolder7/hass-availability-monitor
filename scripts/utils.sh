@@ -160,7 +160,7 @@ throttle_notifications() {
   fi
 
   # Update the timestamp file
-  echo "$now" > "$last_sent_file"
+  echo "$now" > "$last_sent_file.tmp" && mv "$last_sent_file.tmp" "$last_sent_file"
   return 0
 }
 
