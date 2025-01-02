@@ -194,7 +194,42 @@ start_resource_monitoring() {
   done &
 }
 
+# ==============================================
+# Other Utilities
+# ==============================================
+# Create a portable, cross-platform temporary file
+create_temp_file() {
+  local prefix="${1:-test}"
+  local temp_dir="${TMPDIR:-/tmp}"
+  local timestamp
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  local random_str
+  random_str=$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n')
+  local temp_file="${temp_dir}/${prefix}_${timestamp}_${random_str}"
+  
+  # Create the file
+  touch "$temp_file" 2>/dev/null || {
+    echo "Error: Unable to create temporary file" >&2
+    return 1
+  }
+  
+  # Ensure proper permissions
+  chmod 600 "$temp_file" 2>/dev/null || {
+    echo "Warning: Unable to set temporary file permissions" >&2
+  }
+  
+  echo "$temp_file"
+  return 0
 
+  # # Usage:
+  # Create a temporary file
+  # temp_file=$(create_temp_file "my_prefix") || exit 1
+
+  # # Use the temporary file
+  # echo "some content" > "$temp_file"
+
+  # # File is automatically cleaned up when the script exits
+}
 
 # Trap signals for graceful shutdown
 # trap 'log "info" "Script interrupted. Cleaning up..."; kill $(jobs -p) 2>/dev/null; exit 1' SIGINT SIGTERM
