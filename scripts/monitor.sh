@@ -31,6 +31,7 @@ cleanup() {
   # Cleanup temporary files
   rm -f "/tmp/notification_last_sent"
   rm -f "$PATHS_TEMP_DIR/status_template.html"
+  rm -f "$named_pipe"
   
   exit 0
   # log "info" "Cleanup completed. Exiting."
