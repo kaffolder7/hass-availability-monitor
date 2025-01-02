@@ -63,5 +63,6 @@ setup_secure_curl() {
     CURL_SECURE_OPTIONS+=("--proxy=$HTTPS_PROXY")
   fi
 
-  curl "${CURL_SECURE_OPTIONS[@]}" "https://some-url.com"
+  # Usage:
+  # curl "${CURL_SECURE_OPTIONS[@]}" "https://some-url.com"
 }
