@@ -76,8 +76,24 @@ setup_secure_curl() {
 }
 
 initialize_security() {
-  initialize_cert_validator
-  initialize_key_rotator
+  # [[ "${CERT_PINNING_ENABLED:-${DEFAULT_SECURITY_CERT_PINNING_ENABLED:-true}}" == "true" ]] && initialize_cert_validator
+  # [[ "${KEY_ROTATION_ENABLED:-${DEFAULT_SECURITY_KEY_ROTATION_ENABLED:-true}}" == "true" ]] && initialize_key_rotator
+
+  if [[ "${CERT_PINNING_ENABLED:-${DEFAULT_SECURITY_CERT_PINNING_ENABLED:-true}}" == "true" ]]; then
+  # if [[ -n "$CERT_PINNING_ENABLED" || -n "$DEFAULT_SECURITY_CERT_PINNING_ENABLED" ]] && [[ "${CERT_PINNING_ENABLED:-${DEFAULT_SECURITY_CERT_PINNING_ENABLED:-true}}" == "true" ]]; then
+    initialize_cert_validator || log "ERROR" "Unable to pin Home Assistant API certificate."
+  else
+    log "WARN" "Home Assistant API certificate pinning is disabled."
+  # fi &
+  fi
+
+  if [[ "${KEY_ROTATION_ENABLED:-${DEFAULT_SECURITY_KEY_ROTATION_ENABLED:-true}}" == "true" ]]; then
+  # if [[ -n "$KEY_ROTATION_ENABLED" || -n "$DEFAULT_SECURITY_KEY_ROTATION_ENABLED" ]] && [[ "${KEY_ROTATION_ENABLED:-${DEFAULT_SECURITY_KEY_ROTATION_ENABLED:-true}}" == "true" ]]; then
+    initialize_key_rotator || log "ERROR" "Unable to rotate Home Assistant API key."
+  else
+    log "WARN" "Home Assistant API key rotation is disabled."
+  # fi &
+  fi
 }
 
 validate_endpoint_security() {
