@@ -134,7 +134,6 @@ retry_send_sms() {
   return 1
 }
 
-# Add to notifications.sh
 send_email() {
   local subject="$1"
   local message="$2"
