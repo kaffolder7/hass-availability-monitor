@@ -1,0 +1,64 @@
+name: Run Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    # If should run the tests across multiple environments, use a matrix strategy
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+
+    steps:
+    # Checkout the code
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Set up dependencies (based on environment)
+    - name: Install dependencies
+      run: |
+        if [[ "$RUNNER_OS" = "Linux" ]]; then
+          sudo apt-get update
+          sudo apt-get install -y bash curl jq yq
+        elif [ "$RUNNER_OS" = "macOS" ]; then
+          which -s brew || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew install curl jq yq
+        else
+          echo "$RUNNER_OS not supported"
+          exit 1
+        fi
+
+    # Run tests
+    - name: Run tests
+      run: ./run_tests.sh
+
+    # Upload test logs as artifacts
+    - name: Upload test logs
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: logs
+        path: logs/*.log
+
+    # Notify by Telegram
+    - name: Send Telegram message
+      if: failure()
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        format: 'markdown'
+        message: |
+          **CI/CD Test Failure:**
+          Test run failed. Please check logs.
+
+          _Repository: ${{ github.repository }}_
+        # disable_notification: false  # Disables notifications for this message, supports sending a message without notification. Default is false.
